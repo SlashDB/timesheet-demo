@@ -1,0 +1,10 @@
+<div>
+    <div ng-repeat="item in $ctrl.items track by $index">
+        <div>{{ item.name }}</div>
+        <div>
+            <ul>
+                <li ng-repeat="subitem in item.subitems track by $index">{{ subitem.name }}</li>
+            </ul>
+        </div>
+    </div>
+</div>
