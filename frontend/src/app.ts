@@ -20,9 +20,11 @@
                 <div class="form-group">
                     <input class="form-control form-control-sm" type="text" v-model="searchBy" placeholder="search">
                 </div>
-                <div v-if="showOwned" class="form-group">
-                    <label class="col-form-label col-form-label-sm" for="owned" @click="owned = !owned">owned</label>
-                    <input class="form-check-input" type="checkbox" v-model="owned">
+                <div class="form-check" v-if="showOwned">
+                    <label class="form-check-label">
+                        <input class="form-check-input" type="checkbox" v-model="owned">
+                        owned
+                    </label>
                 </div>
             </form>
         </div>
@@ -44,15 +46,15 @@
 
     Vue.component('ItemsList', {
         template: `
-        <div>
-            <div v-for="item in items">
-                <div>{{ item.name }}</div>
-                <div>
-                    <ul>
-                        <li v-for="subitem in item.subitems">{{ subitem.name }}</li>
+        <div class="card">
+            <ul class="list-group list-group-flush" v-for="item in items">
+                <li class="list-group-item bg-faded">{{ item.name }}</li>
+                <li class="list-group-item">
+                    <ul v-for="subitem in item.subitems">
+                        <li>{{ subitem.name }}</li>
                     </ul>
-                </div>
-            </div>
+                </li>
+            </ul>
         </div>
         `,
         props: ['items']
