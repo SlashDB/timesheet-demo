@@ -50,8 +50,13 @@
             <ul class="list-group list-group-flush" v-for="item in items">
                 <li class="list-group-item bg-faded">{{ item.name }}</li>
                 <li class="list-group-item">
-                    <ul v-for="subitem in item.subitems">
+                    <ul v-for="subitem in item.subitems.slice(0, 3)">
                         <li>{{ subitem.name }}</li>
+                    </ul>
+                    <ul v-if="item.subitems.length > 3">
+                        <li>
+                            <button type="button" class="btn btn-link">...</button>
+                        </li>
                     </ul>
                 </li>
             </ul>
