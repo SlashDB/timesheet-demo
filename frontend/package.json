@@ -5,8 +5,8 @@
   "description": "A time/task tracker",
   "main": "",
   "dependencies": {
-    "angular": "^1.6.0",
-    "bootstrap": "^4.0.0-alpha.5"
+    "bootstrap": "^4.0.0-alpha.5",
+    "vue": "^2.1.6"
   },
   "devDependencies": {
     "typescript": "^2.1.1",

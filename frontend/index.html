@@ -1,19 +1,30 @@
 <!DOCTYPE html>
-<html lang="en" ng-app="timelapseApp">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <title>timelapse</title>
     <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.css" />
-    <script src="node_modules/angular/angular.js"></script>
-    <script src="build/app.js"></script>
-    <script src="build/list.js"></script>
+    <script src="node_modules/jquery/dist/jquery.js"></script>
+    <script src="node_modules/vue/dist/vue.js"></script>
 </head>
 
 <body>
-    <div class="container" ng-controller="MainCtrl">
-        <timelapse-list itesm="$ctrl.projects"></timelapse-list>
+    <nav class="navbar navbar-dark bg-inverse">
+        <a class="navbar-brand" href="">timelapse</a>
+    </nav>
+
+    <div class="container" id="app">
+        <div class="row">
+            <div class="col-sm-3">
+                <search-items header="Project" show-owned="true" />
+            </div>
+            <div class="col-sm-9">
+                <items-list :items="projects" />
+            </div>
+        </div>
     </div>
+    <script src="build/app.js"></script>
 </body>
 
 </html>
