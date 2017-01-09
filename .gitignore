@@ -10,3 +10,6 @@ bindata.go
 timesheet-linux64
 timesheet-osx64
 timesheet-win64.exe
+timesheet-linux64.zip
+timesheet-osx64.zip
+timesheet-win64.zip

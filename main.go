@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-
 	"strings"
 
 	assetfs "github.com/elazarl/go-bindata-assetfs"
@@ -27,7 +26,7 @@ func init() {
 	flag.StringVar(&pa.interf, "interface", "localhost", "interface to serve on")
 	flag.UintVar(&pa.port, "port", 8000, "local port to serve on")
 	flag.UintVar(&pa.proxyPort, "proxy-port", 9090, "SlashDB local proxy port")
-	flag.StringVar(&pa.sdbInstanceAddr, "sdb-address", "https://beta.slashdb.com", "SlashDB instance address")
+	flag.StringVar(&pa.sdbInstanceAddr, "sdb-address", "https://demo.slashdb.com", "SlashDB instance address")
 	flag.StringVar(
 		&pa.sdbAPIKey,
 		"sdb-apikey", "apikey:timesheet-api-key", "SlashDB user API key, key and value separated by single ':'",
@@ -61,10 +60,9 @@ func startProxy() {
 	}
 
 	proxy := httputil.NewSingleHostReverseProxy(url)
-	tr := &http.Transport{
+	proxy.Transport = &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
-	proxy.Transport = tr
 
 	tmp := strings.Split(pa.sdbAPIKey, ":")
 	if len(tmp) != 2 {
