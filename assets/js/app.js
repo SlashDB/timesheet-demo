@@ -1,16 +1,7 @@
-/// <reference path="../typings/index.d.ts" />
-
-(function (): void {
+(function () {
     'use strict';
 
-    interface SubItem {
-        name: String
-    }
-
-    interface Item {
-        name: String
-        subitem: Array<SubItem>
-    }
+    var baseURL = 'http://localhost:9090/db/timesheet';
 
     Vue.component('SearchItems', {
         template: `
@@ -29,7 +20,7 @@
             </form>
         </div>
         `,
-        data: function (): Object {
+        data: function () {
             return { searchBy: '', owned: true }
         },
         props: {
@@ -65,38 +56,16 @@
         props: ['items']
     });
 
-    let app = new Vue({
+    var app = new Vue({
         el: '#app',
-        data: function (): Object {
-            return {
-                projects: [
-                    {
-                        name: 'p1',
-                        subitems: [
-                            { name: 'task 1' },
-                            { name: 'task 2' },
-                            { name: 'task 3' }
-                        ]
-                    },
-                    {
-                        name: 'p2',
-                        subitems: [
-                            { name: 'task 1' },
-                            { name: 'task 2' }
-                        ]
-                    },
-                    {
-                        name: 'p3',
-                        subitems: [
-                            { name: 'task 4' },
-                            { name: 'task 5' },
-                            { name: 'task 6' },
-                            { name: 'task 7' },
-                            { name: 'task 8' }
-                        ]
-                    }
-                ]
-            }
+        data: function () {
+            var data = {};
+            $.getJSON(baseURL + '/timesheet/user_id/1.json')
+                .then(function (data) {
+                    data = data;
+                    console.log(data);
+                })
+            return data;
         }
     });
 })();

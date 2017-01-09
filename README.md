@@ -1,1 +1,1 @@
-# timelapse - a time/task tracker
+# timesheet - a simple work tracking application

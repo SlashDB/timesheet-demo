@@ -1,9 +1,0 @@
-{
-  "name": "mediana",
-  "version": false,
-  "dependencies": {},
-  "globalDependencies": {
-    "jquery": "registry:dt/jquery#1.10.0+20161119044246",
-    "vue": "registry:dt/vue#1.0.21+20161209165018"
-  }
-}
