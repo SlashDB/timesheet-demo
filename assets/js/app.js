@@ -59,13 +59,33 @@
     var app = new Vue({
         el: '#app',
         data: function () {
-            var data = {};
+            var projects = {};
+
             $.getJSON(baseURL + '/timesheet/user_id/1.json')
-                .then(function (data) {
-                    data = data;
-                    console.log(data);
-                })
-            return data;
+                .then(function (timesheets) {
+                    var t, pid;
+                    for (var i = 0, l = timesheets.length; i < l; i++) {
+                        t = timesheets[i];
+                        pid = t['project_id'];
+                        if (projects[pid] == null) {
+                            projects[pid] = { timesheets: [], projectData: {} };
+                        }
+                        projects[pid]['timesheets'].push(t);
+                    }
+
+
+                    var projectIds = Object.keys(projects) || [];
+                    for (var i = 0, l = projectIds.length; i < l; i++) {
+                        pid = projectIds[i];
+                        $.getJSON(baseURL + '/project/id/' + pid + '.json')
+                            .then(function (projectData) {
+                                $.extend(true, projects[pid].projectData, projectData);
+                            });
+                    }
+                });
+
+            console.log(projects);
+            return { projects: projects };
         }
     });
 })();
