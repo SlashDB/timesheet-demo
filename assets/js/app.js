@@ -35,31 +35,59 @@
         }
     });
 
-    Vue.component('ItemsList', {
+    Vue.component('ProjectList', {
         template: `
-        <div class="card">
-            <ul class="list-group list-group-flush" v-for="item in items">
-                <li class="list-group-item bg-faded">{{ item.name }}</li>
-                <li class="list-group-item">
-                    <ul v-for="subitem in item.subitems.slice(0, 3)">
-                        <li>{{ subitem.name }}</li>
-                    </ul>
-                    <ul v-if="item.subitems.length > 3">
-                        <li>
-                            <button type="button" class="btn btn-link">...</button>
-                        </li>
-                    </ul>
-                </li>
-            </ul>
+        <div>
+            <div class="card" v-for="pid in pids">
+                <div class="card-header">
+                    <span>{{ projects[pid].data.name }}</span>
+                </div>
+                <div class="card-block">
+                    <div class="card" v-for="timesheet in projects[pid].timesheets">
+                        <div class="card-block">
+                            <form>
+                                <fieldset disabled>
+                                    <div class="form-group">
+                                        <label for="date">Timestamp</label>
+                                        <input type="text"
+                                               v-model="timesheet.date"
+                                               id="date" class="form-control"
+                                               placeholder="timestamp">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="duration">Duration</label>
+                                        <input type="text"
+                                               v-model="timesheet.duration"
+                                               id="duration" class="form-control"
+                                               placeholder="duration">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="accomplishment">Accomplishment</label>
+                                        <textarea type="text"
+                                               v-model="timesheet.accomplishments"
+                                               id="accomplishment" class="form-control"
+                                               placeholder="accomplishment"></textarea>
+                                    </div>
+                                </fieldset>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         `,
-        props: ['items']
+        formatDateTime: function (value) {
+            var d = new Date(value);
+            return d.toLocaleTimeString() + ", " + d.toLocaleDateString();
+        },
+        props: ['projects', 'pids']
     });
 
     var app = new Vue({
         el: '#app',
+
         data: function () {
-            var projects = {};
+            var data = { view: 'projects', projects: {}, pids: [] };
 
             $.getJSON(baseURL + '/timesheet/user_id/1.json')
                 .then(function (timesheets) {
@@ -67,25 +95,25 @@
                     for (var i = 0, l = timesheets.length; i < l; i++) {
                         t = timesheets[i];
                         pid = t['project_id'];
-                        if (projects[pid] == null) {
-                            projects[pid] = { timesheets: [], projectData: {} };
+                        if (data.projects[pid] == null) {
+                            data.projects[pid] = { timesheets: [], data: {} };
                         }
-                        projects[pid]['timesheets'].push(t);
+                        data.projects[pid]['timesheets'].push(t);
                     }
 
-
-                    var projectIds = Object.keys(projects) || [];
-                    for (var i = 0, l = projectIds.length; i < l; i++) {
-                        pid = projectIds[i];
+                    data.pids = Object.keys(data.projects);
+                    console.log(data.pids)
+                    for (var i = 0, l = data.pids.length; i < l; i++) {
+                        pid = data.pids[i];
                         $.getJSON(baseURL + '/project/id/' + pid + '.json')
-                            .then(function (projectData) {
-                                $.extend(true, projects[pid].projectData, projectData);
+                            .then(function (pdata) {
+                                $.extend(true, data.projects[pid].data, pdata);
                             });
                     }
                 });
 
-            console.log(projects);
-            return { projects: projects };
+            console.log(data);
+            return data;
         }
     });
 })();

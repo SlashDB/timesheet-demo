@@ -15,13 +15,8 @@
     </nav>
 
     <div class="container" id="app">
-        <div class="row">
-            <div class="col-sm-3">
-                <search-items header="Project" show-owned="true" />
-            </div>
-            <div class="col-sm-9">
-                <items-list :items="projects" />
-            </div>
+        <div if-v="view == 'projects'" class="row">
+            <project-list :projects="projects" :pids="pids" />
         </div>
     </div>
     <script src="static/assets/js/app.js"></script>
