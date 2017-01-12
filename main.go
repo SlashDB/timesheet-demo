@@ -15,7 +15,7 @@ import (
 
 type ArgFlags struct {
 	interf          string
-	port, proxyPort uint
+	port            uint
 	sdbInstanceAddr string
 	sdbAPIKey       string
 }
@@ -25,7 +25,6 @@ var pa = &ArgFlags{}
 func init() {
 	flag.StringVar(&pa.interf, "interface", "localhost", "interface to serve on")
 	flag.UintVar(&pa.port, "port", 8000, "local port to serve on")
-	flag.UintVar(&pa.proxyPort, "proxy-port", 9090, "SlashDB local proxy port")
 	flag.StringVar(&pa.sdbInstanceAddr, "sdb-address", "https://demo.slashdb.com", "SlashDB instance address")
 	flag.StringVar(
 		&pa.sdbAPIKey,
@@ -35,14 +34,14 @@ func init() {
 }
 
 func setupAuthHandlers() {
-	http.HandleFunc("/auth/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/app/auth/", func(w http.ResponseWriter, r *http.Request) {
 
 	})
 }
 
 func setupBasicHandlers() {
 	afs := &assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: AssetInfo, Prefix: ""}
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/app/", func(w http.ResponseWriter, r *http.Request) {
 		data, err := afs.Asset("index.html")
 		if err != nil {
 			log.Fatalln(err)
@@ -50,10 +49,10 @@ func setupBasicHandlers() {
 		w.Write(data)
 	})
 	fs := http.FileServer(afs)
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	http.Handle("/app/static/", http.StripPrefix("/app/static/", fs))
 }
 
-func startProxy() {
+func setupProxy() {
 	url, err := url.Parse(pa.sdbInstanceAddr)
 	if err != nil {
 		log.Fatalln(err)
@@ -71,22 +70,27 @@ func startProxy() {
 
 	keyName, keyValue := tmp[0], tmp[1]
 	proxyHandler := func(w http.ResponseWriter, r *http.Request) {
+		// API key
 		q := r.URL.Query()
 		q.Set(keyName, keyValue)
 		r.URL.RawQuery = q.Encode()
+		// CORS
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set(
+			"Access-Control-Allow-Headers",
+			"Accept, Origin, Content-Type, Content-Length, X-Requested-With, Accept-Encoding, X-CSRF-Token, Authorization",
+		)
 		proxy.ServeHTTP(w, r)
 	}
-
-	addr := fmt.Sprintf("%s:%d", pa.interf, pa.proxyPort)
-	fmt.Printf("SlashDB proxy running on %s.\n", addr)
-	log.Fatal(http.ListenAndServe(addr, http.HandlerFunc(proxyHandler)))
+	http.HandleFunc("/", proxyHandler)
 }
 
 func main() {
-	go startProxy()
+	setupProxy()
 	setupBasicHandlers()
 	setupAuthHandlers()
 	addr := fmt.Sprintf("%s:%d", pa.interf, pa.port)
-	fmt.Printf("Serving on %s.\n", addr)
+	fmt.Printf("Serving on http://%s/app/.\n", addr)
 	log.Fatal(http.ListenAndServe(addr, nil))
 }

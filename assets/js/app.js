@@ -98,7 +98,7 @@
         data: function () {
             var data = { view: 'projects', projects: {}, pids: [] };
 
-            $.getJSON(getURL('/timesheet/user_id/1.json'))
+            $.getJSON(getURL('/timesheet/user_id/2.json'))
                 .then(function (timesheets) {
                     var t, pid;
                     for (var i = 0, l = timesheets.length; i < l; i++) {
