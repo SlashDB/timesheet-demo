@@ -1,8 +1,6 @@
 (function () {
     'use strict';
 
-    var baseURL = 'http://localhost:9090/db/timesheet';
-
     Vue.component('SearchItems', {
         template: `
         <div class="card card-block">
@@ -35,18 +33,23 @@
         }
     });
 
+    function getURL(s) {
+        return window.timesheet.baseURL + s;
+    }
+
     Vue.component('ProjectList', {
         template: `
-        <div>
-            <div class="card" v-for="pid in pids">
+        <div class="mt-3">
+            <div class="card mb-3" v-for="pid in pids">
                 <div class="card-header">
-                    <span>{{ projects[pid].data.name }}</span>
+                    <span><strong>{{ projects[pid].data.name }}</strong></span>
+                    <span class="float-sm-right float-md-right float-lg-right">total duration: <strong>{{ sumDuration(projects[pid]) }}</strong> hours</span>
                 </div>
                 <div class="card-block">
                     <div class="card" v-for="timesheet in projects[pid].timesheets">
                         <div class="card-block">
                             <form>
-                                <fieldset disabled>
+                                <fieldset disabled readonly>
                                     <div class="form-group">
                                         <label for="date">Timestamp</label>
                                         <input type="text"
@@ -80,16 +83,22 @@
             var d = new Date(value);
             return d.toLocaleTimeString() + ", " + d.toLocaleDateString();
         },
+        methods: {
+            sumDuration: function (project) {
+                return project.timesheets.map(function (el) { return el.duration || 0 }).reduce(function (a, b) {
+                    return a + b;
+                }, 0)
+            }
+        },
         props: ['projects', 'pids']
     });
 
     var app = new Vue({
         el: '#app',
-
         data: function () {
             var data = { view: 'projects', projects: {}, pids: [] };
 
-            $.getJSON(baseURL + '/timesheet/user_id/1.json')
+            $.getJSON(getURL('/timesheet/user_id/1.json'))
                 .then(function (timesheets) {
                     var t, pid;
                     for (var i = 0, l = timesheets.length; i < l; i++) {
@@ -102,17 +111,22 @@
                     }
 
                     data.pids = Object.keys(data.projects);
-                    console.log(data.pids)
                     for (var i = 0, l = data.pids.length; i < l; i++) {
-                        pid = data.pids[i];
-                        $.getJSON(baseURL + '/project/id/' + pid + '.json')
-                            .then(function (pdata) {
+                        var pid = data.pids[i];
+                        $.ajax({
+                            url: getURL('/project/id/' + pid + '.json'),
+                            type: 'GET',
+                            async: false,
+                            cache: false,
+                            timeout: 30000,
+                            success: function (pdata) {
                                 $.extend(true, data.projects[pid].data, pdata);
-                            });
+                            }
+                        });
+
                     }
                 });
 
-            console.log(data);
             return data;
         }
     });

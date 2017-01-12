@@ -15,10 +15,15 @@
     </nav>
 
     <div class="container" id="app">
-        <div if-v="view == 'projects'" class="row">
+        <div if-v="view == 'projects'">
             <project-list :projects="projects" :pids="pids" />
         </div>
     </div>
+    <script type="text/javascript">
+        window.timesheet = {
+            baseURL: 'http://localhost:9090/db/timesheet'
+        }
+    </script>
     <script src="static/assets/js/app.js"></script>
 </body>
 
