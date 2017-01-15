@@ -20,7 +20,10 @@ type ArgFlags struct {
 	sdbAPIKey       string
 }
 
-var pa = &ArgFlags{}
+var (
+	pa   = &ArgFlags{}
+	addr string
+)
 
 func init() {
 	flag.StringVar(&pa.interf, "interface", "localhost", "interface to serve on")
@@ -31,12 +34,12 @@ func init() {
 		"sdb-apikey", "apikey:timesheet-api-key", "SlashDB user API key, key and value separated by single ':'",
 	)
 	flag.Parse()
+	addr = fmt.Sprintf("%s:%d", pa.interf, pa.port)
 }
 
 func setupAuthHandlers() {
-	http.HandleFunc("/app/auth/", func(w http.ResponseWriter, r *http.Request) {
-
-	})
+	http.HandleFunc("/app/reg/", regHandler)
+	http.HandleFunc("/app/auth/", authHandler)
 }
 
 func setupBasicHandlers() {
@@ -90,7 +93,6 @@ func main() {
 	setupProxy()
 	setupBasicHandlers()
 	setupAuthHandlers()
-	addr := fmt.Sprintf("%s:%d", pa.interf, pa.port)
 	fmt.Printf("Serving on http://%s/app/.\n", addr)
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
