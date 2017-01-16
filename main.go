@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -14,10 +15,11 @@ import (
 )
 
 type ArgFlags struct {
-	interf          string
-	port            uint
-	sdbInstanceAddr string
-	sdbAPIKey       string
+	Interf          string
+	Port            uint
+	SdbInstanceAddr string
+	SdbDBName       string
+	SdbAPIKey       string
 }
 
 var (
@@ -26,15 +28,16 @@ var (
 )
 
 func init() {
-	flag.StringVar(&pa.interf, "interface", "localhost", "interface to serve on")
-	flag.UintVar(&pa.port, "port", 8000, "local port to serve on")
-	flag.StringVar(&pa.sdbInstanceAddr, "sdb-address", "https://demo.slashdb.com", "SlashDB instance address")
+	flag.StringVar(&pa.Interf, "interface", "localhost", "interface to serve on")
+	flag.UintVar(&pa.Port, "port", 8000, "local port to serve on")
+	flag.StringVar(&pa.SdbInstanceAddr, "sdb-address", "https://demo.slashdb.com", "SlashDB instance address")
+	flag.StringVar(&pa.SdbDBName, "sdb-dbname", "timesheet", "SlashDB DB name i.e. https://demo.slashdb.com/db/>>timesheet<<")
 	flag.StringVar(
-		&pa.sdbAPIKey,
+		&pa.SdbAPIKey,
 		"sdb-apikey", "apikey:timesheet-api-key", "SlashDB user API key, key and value separated by single ':'",
 	)
 	flag.Parse()
-	addr = fmt.Sprintf("%s:%d", pa.interf, pa.port)
+	addr = fmt.Sprintf("%s:%d", pa.Interf, pa.Port)
 }
 
 func setupAuthHandlers() {
@@ -44,19 +47,24 @@ func setupAuthHandlers() {
 
 func setupBasicHandlers() {
 	afs := &assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: AssetInfo, Prefix: ""}
+	indexTmpl := template.New("index.html")
+	data, err := afs.Asset("index.html")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	_, err = indexTmpl.Parse(string(data))
+	if err != nil {
+		log.Fatalln(err)
+	}
 	http.HandleFunc("/app/", func(w http.ResponseWriter, r *http.Request) {
-		data, err := afs.Asset("index.html")
-		if err != nil {
-			log.Fatalln(err)
-		}
-		w.Write(data)
+		indexTmpl.Execute(w, pa)
 	})
 	fs := http.FileServer(afs)
 	http.Handle("/app/static/", http.StripPrefix("/app/static/", fs))
 }
 
 func setupProxy() {
-	url, err := url.Parse(pa.sdbInstanceAddr)
+	url, err := url.Parse(pa.SdbInstanceAddr)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -66,9 +74,9 @@ func setupProxy() {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
-	tmp := strings.Split(pa.sdbAPIKey, ":")
+	tmp := strings.Split(pa.SdbAPIKey, ":")
 	if len(tmp) != 2 {
-		log.Fatalln(fmt.Errorf("expected key, value pair, got: %s", pa.sdbAPIKey))
+		log.Fatalln(fmt.Errorf("expected key, value pair, got: %s", pa.SdbAPIKey))
 	}
 
 	keyName, keyValue := tmp[0], tmp[1]

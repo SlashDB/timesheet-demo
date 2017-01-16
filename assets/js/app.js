@@ -1,38 +1,6 @@
 (function () {
     'use strict';
 
-    Vue.component('SearchItems', {
-        template: `
-        <div class="card card-block">
-            <h4 class="card-title">{{ header }} <button type="button" class="btn btn-link">+</button></h4>
-            <form>
-                <div class="form-group">
-                    <input class="form-control form-control-sm" type="text" v-model="searchBy" placeholder="search">
-                </div>
-                <div class="form-check" v-if="showOwned">
-                    <label class="form-check-label">
-                        <input class="form-check-input" type="checkbox" v-model="owned">
-                        owned
-                    </label>
-                </div>
-            </form>
-        </div>
-        `,
-        data: function () {
-            return { searchBy: '', owned: true }
-        },
-        props: {
-            showOwned: {
-                type: Boolean,
-                default: false
-            },
-            header: {
-                type: String,
-                required: true
-            }
-        }
-    });
-
     function getURL(s) {
         return window.timesheet.baseURL + s;
     }
@@ -85,7 +53,9 @@
         },
         methods: {
             sumDuration: function (project) {
-                return project.timesheets.map(function (el) { return el.duration || 0 }).reduce(function (a, b) {
+                return project.timesheets.map(function (el) {
+                    return el.duration || 0
+                }).reduce(function (a, b) {
                     return a + b;
                 }, 0)
             }
@@ -96,7 +66,11 @@
     var app = new Vue({
         el: '#app',
         data: function () {
-            var data = { view: 'projects', projects: {}, pids: [] };
+            var data = {
+                view: 'projects',
+                projects: {},
+                pids: []
+            };
 
             $.getJSON(getURL('/timesheet/user_id/2.json'))
                 .then(function (timesheets) {
@@ -105,7 +79,10 @@
                         t = timesheets[i];
                         pid = t['project_id'];
                         if (data.projects[pid] == null) {
-                            data.projects[pid] = { timesheets: [], data: {} };
+                            data.projects[pid] = {
+                                timesheets: [],
+                                data: {}
+                            };
                         }
                         data.projects[pid]['timesheets'].push(t);
                     }

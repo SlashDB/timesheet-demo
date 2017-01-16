@@ -47,7 +47,7 @@ func regHandler(w http.ResponseWriter, r *http.Request) {
 	un := r.FormValue("username")
 	unErrors := validateField("username", un, 3, 35)
 
-	uresp, err := http.Get("http://" + addr + "/db/timesheet/user/username/" + un + ".json")
+	uresp, err := http.Get("http://" + addr + "/db/" + pa.SdbDBName + "/user/username/" + un + ".json")
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -109,7 +109,7 @@ func regHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ureq, err := http.Post("http://"+addr+"/db/timesheet/user.json", "application/json", bytes.NewReader(data))
+	ureq, err := http.Post("http://"+addr+"/db/"+pa.SdbDBName+"/user.json", "application/json", bytes.NewReader(data))
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -176,7 +176,7 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uresp, err := http.Get("http://" + addr + "/db/timesheet/user/username/" + un + ".json")
+	uresp, err := http.Get("http://" + addr + "/db/" + pa.SdbDBName + "/user/username/" + un + ".json")
 	if err != nil {
 		log.Println(err)
 		return

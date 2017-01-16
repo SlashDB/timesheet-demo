@@ -1,4 +1,4 @@
-DROP TABLE project;
+DROP TABLE IF EXISTS project;
 CREATE TABLE `project` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(50) NOT NULL,
@@ -9,7 +9,7 @@ CREATE TABLE `project` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
-DROP TABLE user;
+DROP TABLE IF EXISTS user;
 CREATE TABLE `user` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `username` varchar(35) NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE `user` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
-DROP TABLE timesheet;
+DROP TABLE IF EXISTS timesheet;
 CREATE TABLE `timesheet` (
   `user_id` int(11) NOT NULL,
   `project_id` int(11) NOT NULL,
