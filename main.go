@@ -47,16 +47,16 @@ func setupAuthHandlers() {
 
 func setupBasicHandlers() {
 	afs := &assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: AssetInfo, Prefix: ""}
-	indexTmpl := template.New("index.html")
-	data, err := afs.Asset("index.html")
-	if err != nil {
-		log.Fatalln(err)
-	}
-	_, err = indexTmpl.Parse(string(data))
-	if err != nil {
-		log.Fatalln(err)
-	}
 	http.HandleFunc("/app/", func(w http.ResponseWriter, r *http.Request) {
+		indexTmpl := template.New("index.html")
+		data, err := afs.Asset("index.html")
+		if err != nil {
+			log.Fatalln(err)
+		}
+		_, err = indexTmpl.Parse(string(data))
+		if err != nil {
+			log.Fatalln(err)
+		}
 		indexTmpl.Execute(w, pa)
 	})
 	fs := http.FileServer(afs)

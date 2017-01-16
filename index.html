@@ -10,15 +10,27 @@
 </head>
 
 <body>
-    <nav class="navbar navbar-dark bg-inverse">
-        <a class="navbar-brand" href="">timesheet app</a>
-    </nav>
+    <div id="app">
+        <nav class="navbar navbar-inverse bg-inverse">
+            <a class="navbar-brand" href="">timesheet app</a>
 
-    <div class="container" id="app">
-        <div if-v="view == 'projects'">
-            <project-list :projects="projects" :pids="pids" />
+            <ul class="navbar-nav navbar-toggler-right" v-show="view === 'projects'" @click="setView('login')">
+                <li class="nav-item">
+                    <button type="button" class="btn btn-link nav-link">Logout</button>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="container">
+            <div v-if="view === 'login' || view === 'register'">
+                <auth-card :view="view" @set-view="setView" />
+            </div>
+            <div v-if="view === 'projects'">
+                <project-list />
+            </div>
         </div>
     </div>
+
     <script type="text/javascript">
         window.timesheet = {
             baseURL: '/db/{{.SdbDBName}}'

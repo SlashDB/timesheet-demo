@@ -5,6 +5,78 @@
         return window.timesheet.baseURL + s;
     }
 
+    Vue.component('LoginForm', {
+        template: `
+        <form>
+            <div class="form-group">
+                <label for="username">User name</label>
+                <input type="text" class="form-control" id="username" placeholder="enter user name">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" class="form-control" id="password" placeholder="enter user password">
+            </div>
+            <button type="button" @click="$emit('login', 'project')" class="btn btn-primary">GO!</button>
+        </form>
+        `
+    });
+
+    Vue.component('RegisterForm', {
+        template: `
+        <form>
+            <div class="form-group">
+                <label for="username">User name</label>
+                <input type="text" class="form-control" id="username" placeholder="enter your new user name">
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" class="form-control" id="email" placeholder="enter your email address">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" class="form-control" id="password" placeholder="enter user password">
+            </div>
+            <div class="form-group">
+                <input type="password2" class="form-control" id="password2" placeholder="re-enter user password">
+            </div>
+            <button type="button" @click="$emit('register', 'project')" class="btn btn-primary">GO!</button>
+        </form>
+        `
+    });
+
+    Vue.component('AuthCard', {
+        template: `
+        <div class="card text-center mt-3">
+            <div class="card-header">
+                <ul class="nav nav-tabs justify-content-center card-header-tabs">
+                    <li class="nav-item" @click="$emit('set-view', 'login')">
+                        <a class="nav-link" :class="{active: view == 'login'}">Login</a>
+                    </li>
+                    <li class="nav-item" @click="$emit('set-view', 'register')">
+                        <a class="nav-link" :class="{active: view == 'register'}" >Register</a>
+                    </li>
+                </ul>
+            </div>
+            <div v-show="view === 'login'" class="card-block">
+                <p class="card-text">
+                    <login-form @login="$emit('set-view', 'project')" />
+                </p>
+            </div>
+            <div v-show="view === 'register'" class="card-block">
+                <p class="card-text">
+                    <register-form @register="$emit('set-view', 'login')" />
+                </p>
+            </div>
+        </div>
+        `,
+        props: {
+            view: {
+                type: String,
+                required: true
+            }
+        }
+    });
+
     Vue.component('ProjectList', {
         template: `
         <div class="mt-3">
@@ -35,9 +107,9 @@
                                     <div class="form-group">
                                         <label for="accomplishment">Accomplishment</label>
                                         <textarea type="text"
-                                               v-model="timesheet.accomplishments"
-                                               id="accomplishment" class="form-control"
-                                               placeholder="accomplishment"></textarea>
+                                                  v-model="timesheet.accomplishments"
+                                                  id="accomplishment" class="form-control"
+                                                  placeholder="accomplishment"></textarea>
                                     </div>
                                 </fieldset>
                             </form>
@@ -47,27 +119,8 @@
             </div>
         </div>
         `,
-        formatDateTime: function (value) {
-            var d = new Date(value);
-            return d.toLocaleTimeString() + ", " + d.toLocaleDateString();
-        },
-        methods: {
-            sumDuration: function (project) {
-                return project.timesheets.map(function (el) {
-                    return el.duration || 0
-                }).reduce(function (a, b) {
-                    return a + b;
-                }, 0)
-            }
-        },
-        props: ['projects', 'pids']
-    });
-
-    var app = new Vue({
-        el: '#app',
         data: function () {
             var data = {
-                view: 'projects',
                 projects: {},
                 pids: []
             };
@@ -105,6 +158,31 @@
                 });
 
             return data;
+        },
+        methods: {
+            formatDateTime: function (value) {
+                var d = new Date(value);
+                return d.toLocaleTimeString() + ", " + d.toLocaleDateString();
+            },
+            sumDuration: function (project) {
+                return project.timesheets.map(function (el) {
+                    return el.duration || 0
+                }).reduce(function (a, b) {
+                    return a + b;
+                }, 0)
+            }
+        }
+    });
+
+    var app = new Vue({
+        el: '#app',
+        methods: {
+            setView: function (viewName) {
+                this.view = viewName;
+            },
+        },
+        data: {
+            view: 'login'
         }
     });
 })();
