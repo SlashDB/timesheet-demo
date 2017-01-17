@@ -259,7 +259,9 @@
             <div class="card mb-3" v-for="pid in pids">
                 <div class="card-header">
                     <span><strong>{{ projects[pid].data.name }}</strong></span>
-                    <span class="float-sm-right float-md-right float-lg-right">total duration: <strong>{{ sumDuration(projects[pid]) }}</strong> hours</span>
+                    <span class="float-sm-right float-md-right float-lg-right">
+                        total duration: <strong>{{ sumDuration(projects[pid]) }}</strong> hours
+                    </span>
                 </div>
                 <div class="card-block">
                     <div class="card" v-for="timesheet in projects[pid].timesheets">
