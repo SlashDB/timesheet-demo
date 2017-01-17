@@ -5,43 +5,194 @@
         return window.timesheet.baseURL + s;
     }
 
+    Vue.component('InputErrors', {
+        template: '<div><div v-for="e in errors" class="form-control-feedback">{{ e }}</div></div>',
+        props: {
+            errors: {
+                type: Array,
+                default: function () {
+                    return [];
+                }
+            }
+        }
+    });
+
     Vue.component('LoginForm', {
         template: `
-        <form>
-            <div class="form-group">
+        <form @submit.prevent="login">
+            <div class="form-group" :class="{'has-danger': username.errors.length > 0}">
                 <label for="username">User name</label>
-                <input type="text" class="form-control" id="username" placeholder="enter user name">
+                <input type="text" class="form-control"
+                       :class="{'form-control-danger': username.errors.length > 0}"
+                       id="username"
+                       v-model="username.value"
+                       placeholder="enter user name">
+                <input-errors :errors="username.errors"/>
             </div>
-            <div class="form-group">
+            <div class="form-group" :class="{'has-danger': password.errors.length > 0}">
                 <label for="password">Password</label>
-                <input type="password" class="form-control" id="password" placeholder="enter user password">
+                <input type="password" class="form-control"
+                       :class="{'form-control-danger': username.errors.length > 0}"
+                       id="password"
+                       v-model="password.value"
+                       placeholder="enter password">
+                <input-errors :errors="password.errors"/>
             </div>
-            <button type="button" @click="$emit('login', 'project')" class="btn btn-primary">GO!</button>
+            <button type="submit" class="btn btn-primary">GO!</button>
         </form>
-        `
+        `,
+        data: function () {
+            return {
+                username: {
+                    value: '',
+                    errors: []
+                },
+                password: {
+                    value: '',
+                    errors: []
+                },
+                form: {
+                    errors: []
+                },
+            };
+        },
+        methods: {
+            login: function ($event) {
+                var t = this,
+                    ks = Object.keys(t._data);
+
+                $.ajax({
+                    url: '/app/auth/',
+                    data: {
+                        username: t.username.value,
+                        password: t.password.value,
+                    },
+                    dataType: 'json',
+                    type: 'POST',
+                    success: function (resp) {
+                        for (var i = 0, l = ks.length; i < l; i++) {
+                            t[ks[i]].errors = [];
+                        }
+                        t.$emit('logged-in');
+                    },
+                    error: function (resp) {
+                        for (var i = 0, l = ks.length; i < l; i++) {
+                            k = ks[i];
+                            t[k].errors = resp.responseJSON[k] || [];
+                        }
+                    }
+                });
+            }
+        }
     });
 
     Vue.component('RegisterForm', {
         template: `
-        <form>
-            <div class="form-group">
+        <form @submit.prevent="register">
+            <div class="form-group" :class="{'has-danger': username.errors.length > 0}">
                 <label for="username">User name</label>
-                <input type="text" class="form-control" id="username" placeholder="enter your new user name">
+                <input type="text" class="form-control"
+                       :class="{'form-control-danger': username.errors.length > 0}"
+                       id="username"
+                       v-model="username.value"
+                       placeholder="enter your new user name">
+                <input-errors :errors="username.errors"/>
             </div>
-            <div class="form-group">
+            <div class="form-group" :class="{'has-danger': email.errors.length > 0}">
                 <label for="email">Email</label>
-                <input type="email" class="form-control" id="email" placeholder="enter your email address">
+                <input type="email"
+                       :class="{'form-control-danger': email.errors.length > 0}"
+                       class="form-control"
+                       id="email"
+                       v-model="email.value"
+                       placeholder="enter your email address">
+                <input-errors :errors="email.errors"/>
             </div>
-            <div class="form-group">
+            <div class="form-group" :class="{'has-danger': password.errors.length > 0}">
                 <label for="password">Password</label>
-                <input type="password" class="form-control" id="password" placeholder="enter user password">
+                <input type="password" class="form-control"
+                       :class="{'form-control-danger': password.errors.length > 0}"
+                       @keyup="isTheSamePass"
+                       id="password"
+                       v-model="password.value"
+                       placeholder="enter user password">
+                <input-errors :errors="password.errors"/>
             </div>
-            <div class="form-group">
-                <input type="password2" class="form-control" id="password2" placeholder="re-enter user password">
+            <div class="form-group" :class="{'has-danger': password2.errors.length > 0}">
+                <input type="password" class="form-control"
+                       :class="{'form-control-danger': password2.errors.length > 0}"
+                       @keyup="isTheSamePass"
+                       id="password2"
+                       v-model="password2.value"
+                       placeholder="re-enter user password">
+                <input-errors :errors="password2.errors"/>
+                <small class="form-text text-muted">You need to re-enter the password above.</small>
             </div>
-            <button type="button" @click="$emit('register', 'project')" class="btn btn-primary">GO!</button>
+            <button type="submit" class="btn btn-primary">GO!</button>
         </form>
-        `
+        `,
+        data: function () {
+            return {
+                username: {
+                    value: '',
+                    errors: []
+                },
+                email: {
+                    value: '',
+                    errors: []
+                },
+                password: {
+                    value: '',
+                    errors: []
+                },
+                password2: {
+                    value: '',
+                    errors: []
+                },
+                form: {
+                    errors: []
+                },
+            };
+        },
+        methods: {
+            isTheSamePass: function () {
+                if (this.password.value !== this.password2.value) {
+                    if (this.password2.errors.length === 0) {
+                        this.password2.errors.push("the password is different to the one above");
+                    }
+                    return;
+                }
+                this.password2.errors.pop();
+            },
+            register: function () {
+                var t = this,
+                    ks = Object.keys(t._data);
+
+                $.ajax({
+                    url: '/app/reg/',
+                    data: {
+                        username: t.username.value,
+                        email: t.email.value,
+                        password: t.password.value,
+                    },
+                    dataType: 'json',
+                    type: 'POST',
+                    success: function (resp) {
+                        for (var i = 0, l = ks.length; i < l; i++) {
+                            t[ks[i]].errors = [];
+                        }
+                        t.$emit('registered');
+                    },
+                    error: function (resp) {
+                        var k;
+                        for (var i = 0, l = ks.length; i < l; i++) {
+                            k = ks[i];
+                            t[k].errors = resp.responseJSON[k] || [];
+                        }
+                    }
+                });
+            }
+        }
     });
 
     Vue.component('AuthCard', {
@@ -59,12 +210,12 @@
             </div>
             <div v-show="view === 'login'" class="card-block">
                 <p class="card-text">
-                    <login-form @login="$emit('set-view', 'project')" />
+                    <login-form @logged-in="$emit('set-view', 'project')"/>
                 </p>
             </div>
             <div v-show="view === 'register'" class="card-block">
                 <p class="card-text">
-                    <register-form @register="$emit('set-view', 'login')" />
+                    <register-form @registered="$emit('set-view', 'login')"/>
                 </p>
             </div>
         </div>
@@ -165,11 +316,13 @@
                 return d.toLocaleTimeString() + ", " + d.toLocaleDateString();
             },
             sumDuration: function (project) {
-                return project.timesheets.map(function (el) {
-                    return el.duration || 0
-                }).reduce(function (a, b) {
-                    return a + b;
-                }, 0)
+                return project.timesheets
+                    .map(function (el) {
+                        return el.duration || 0;
+                    })
+                    .reduce(function (a, b) {
+                        return a + b;
+                    }, 0);
             }
         }
     });

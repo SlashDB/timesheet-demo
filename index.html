@@ -23,10 +23,10 @@
 
         <div class="container">
             <div v-if="view === 'login' || view === 'register'">
-                <auth-card :view="view" @set-view="setView" />
+                <auth-card :view="view" @set-view="setView"/>
             </div>
             <div v-if="view === 'projects'">
-                <project-list />
+                <project-list/>
             </div>
         </div>
     </div>
