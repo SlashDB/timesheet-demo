@@ -17,6 +17,15 @@
         }
     });
 
+    var resetFields = function (target, items) {
+        var item;
+        for (var i = 0, l = items.length; i < l; i++) {
+            item = target[items[i]];
+            item.errors = [];
+            item.value = '';
+        }
+    };
+
     Vue.component('LoginForm', {
         template: `
         <form @submit.prevent="login">
@@ -57,6 +66,14 @@
             };
         },
         methods: {
+            createAuthInfo: function (accessToken) {
+                var payload = JSON.parse(atob(accessToken.split('.')[1])),
+                    authInfo = {
+                        accessToken: accessToken,
+                        payload: payload
+                    };
+                return authInfo;
+            },
             login: function ($event) {
                 var t = this,
                     ks = Object.keys(t._data);
@@ -70,12 +87,11 @@
                     dataType: 'json',
                     type: 'POST',
                     success: function (resp) {
-                        for (var i = 0, l = ks.length; i < l; i++) {
-                            t[ks[i]].errors = [];
-                        }
-                        t.$emit('logged-in');
+                        resetFields(t, ks);
+                        t.$emit('logged-in', t.createAuthInfo(resp.accessToken));
                     },
                     error: function (resp) {
+                        var k;
                         for (var i = 0, l = ks.length; i < l; i++) {
                             k = ks[i];
                             t[k].errors = resp.responseJSON[k] || [];
@@ -178,16 +194,19 @@
                     dataType: 'json',
                     type: 'POST',
                     success: function (resp) {
-                        for (var i = 0, l = ks.length; i < l; i++) {
-                            t[ks[i]].errors = [];
-                        }
+                        resetFields(t, ks);
                         t.$emit('registered');
                     },
                     error: function (resp) {
-                        var k;
-                        for (var i = 0, l = ks.length; i < l; i++) {
-                            k = ks[i];
-                            t[k].errors = resp.responseJSON[k] || [];
+                        if (resp.status != 201) {
+                            var k;
+                            for (var i = 0, l = ks.length; i < l; i++) {
+                                k = ks[i];
+                                t[k].errors = resp.responseJSON[k] || [];
+                            }
+                        } else {
+                            resetFields(t, ks);
+                            t.$emit('registered');
                         }
                     }
                 });
@@ -210,7 +229,7 @@
             </div>
             <div v-show="view === 'login'" class="card-block">
                 <p class="card-text">
-                    <login-form @logged-in="$emit('set-view', 'project')"/>
+                    <login-form @logged-in="onLoggedIn"/>
                 </p>
             </div>
             <div v-show="view === 'register'" class="card-block">
@@ -220,6 +239,12 @@
             </div>
         </div>
         `,
+        methods: {
+            onLoggedIn: function (accessInfo) {
+                this.$emit('store-auth-info', accessInfo);
+                this.$emit('set-view', 'projects');
+            }
+        },
         props: {
             view: {
                 type: String,
@@ -276,37 +301,39 @@
                 pids: []
             };
 
-            $.getJSON(getURL('/timesheet/user_id/2.json'))
-                .then(function (timesheets) {
-                    var t, pid;
-                    for (var i = 0, l = timesheets.length; i < l; i++) {
-                        t = timesheets[i];
-                        pid = t['project_id'];
-                        if (data.projects[pid] == null) {
-                            data.projects[pid] = {
-                                timesheets: [],
-                                data: {}
-                            };
-                        }
-                        data.projects[pid]['timesheets'].push(t);
-                    }
-
-                    data.pids = Object.keys(data.projects);
-                    for (var i = 0, l = data.pids.length; i < l; i++) {
-                        var pid = data.pids[i];
-                        $.ajax({
-                            url: getURL('/project/id/' + pid + '.json'),
-                            type: 'GET',
-                            async: false,
-                            cache: false,
-                            timeout: 30000,
-                            success: function (pdata) {
-                                $.extend(true, data.projects[pid].data, pdata);
+            if (this.userId !== -1) {
+                $.getJSON(getURL('/timesheet/user_id/' + this.userId + '.json'))
+                    .then(function (timesheets) {
+                        var t, pid;
+                        for (var i = 0, l = timesheets.length; i < l; i++) {
+                            t = timesheets[i];
+                            pid = t['project_id'];
+                            if (data.projects[pid] == null) {
+                                data.projects[pid] = {
+                                    timesheets: [],
+                                    data: {}
+                                };
                             }
-                        });
+                            data.projects[pid]['timesheets'].push(t);
+                        }
 
-                    }
-                });
+                        data.pids = Object.keys(data.projects);
+                        for (var i = 0, l = data.pids.length; i < l; i++) {
+                            var pid = data.pids[i];
+                            $.ajax({
+                                url: getURL('/project/id/' + pid + '.json'),
+                                type: 'GET',
+                                async: false,
+                                cache: false,
+                                timeout: 30000,
+                                success: function (pdata) {
+                                    $.extend(true, data.projects[pid].data, pdata);
+                                }
+                            });
+
+                        }
+                    });
+            }
 
             return data;
         },
@@ -324,18 +351,62 @@
                         return a + b;
                     }, 0);
             }
+        },
+        props: {
+            userId: {
+                type: Number,
+                default: -1,
+            }
+        }
+    });
+
+    Vue.component('User', {
+        template: 'you are: <strong>{{ name }}</strong>',
+        props: {
+            name: {
+                type: String,
+                default: ''
+            }
         }
     });
 
     var app = new Vue({
         el: '#app',
         methods: {
+            storeAuthInfo: function (authInfo) {
+                localStorage.setItem(this.lsAuthInfoKey, JSON.stringify(authInfo));
+            },
+            restoreAuthInfo: function (key) {
+                key = key == null ? this.lsAuthInfoKey : key;
+                var authInfoStr = localStorage.getItem(key);
+                if (authInfoStr != null) {
+                    this.authInfo = JSON.parse(authInfoStr);
+                    this.userId = this.authInfo.payload.id;
+                    this.userName = this.authInfo.payload.username;
+                    this.setView('projects');
+                }
+            },
+            deleteAuthInfo: function (key) {
+                key = key == null ? this.lsAuthInfoKey : key;
+                localStorage.removeItem(key);
+            },
             setView: function (viewName) {
                 this.view = viewName;
             },
+            logOut: function () {
+                this.deleteAuthInfo();
+                this.setView('login');
+            }
+        },
+        mounted: function () {
+            this.restoreAuthInfo(this.lsAuthInfoKey);
         },
         data: {
-            view: 'login'
+            view: 'login',
+            authInfo: {},
+            userId: '',
+            userName: '',
+            lsAuthInfoKey: 'timesheetAuthInfo',
         }
     });
 })();

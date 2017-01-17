@@ -9,16 +9,19 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
+
+	jwt "github.com/dgrijalva/jwt-go"
 
 	"golang.org/x/crypto/pbkdf2"
 )
 
-var defaultSalt = []byte("timesheet app")
-
-func logAndWrite(err error, w http.ResponseWriter) {
-	log.Println(err)
+func logAndWrite(err error, logMsg string, w http.ResponseWriter) {
+	log.Println(logMsg+",", err)
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
+
+var defaultSalt = []byte("timesheet app salt")
 
 func genPassword(p string, salt []byte) string {
 	if salt == nil {
@@ -56,7 +59,7 @@ func regHandler(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
 		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
-			logAndWrite(err, w)
+			logAndWrite(err, "", w)
 			return
 		}
 		defer r.Body.Close()
@@ -66,14 +69,14 @@ func regHandler(w http.ResponseWriter, r *http.Request) {
 
 		uresp, err := http.Get("http://" + addr + "/db/" + pa.SdbDBName + "/user/username/" + un + ".json")
 		if err != nil {
-			logAndWrite(err, w)
+			logAndWrite(err, fmt.Sprintf("couldn't find user %q, or service %q unavailable", un, addr), w)
 			return
 		}
 		defer uresp.Body.Close()
 
 		body, err := ioutil.ReadAll(uresp.Body)
 		if err != nil {
-			logAndWrite(err, w)
+			logAndWrite(err, "error reading user response body", w)
 			return
 		}
 		if len(body) > 2 {
@@ -104,7 +107,7 @@ func regHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		encodedPass := genPassword(passwd, nil)
+		encodedPass := genPassword(un+passwd, nil)
 		payload := map[string]string{
 			"username": un,
 			"passwd":   encodedPass,
@@ -119,7 +122,7 @@ func regHandler(w http.ResponseWriter, r *http.Request) {
 
 		ureq, err := http.Post("http://"+addr+"/db/"+pa.SdbDBName+"/user.json", "application/json", bytes.NewReader(data))
 		if err != nil {
-			logAndWrite(err, w)
+			logAndWrite(err, fmt.Sprintf("couldn't create user %q, or service %q unavailable", un, addr), w)
 			return
 		}
 		defer ureq.Body.Close()
@@ -127,7 +130,7 @@ func regHandler(w http.ResponseWriter, r *http.Request) {
 		if ureq.StatusCode != http.StatusCreated {
 			body, err := ioutil.ReadAll(ureq.Body)
 			if err != nil {
-				logAndWrite(err, w)
+				logAndWrite(err, "error reading user creation response body", w)
 				return
 			}
 
@@ -141,12 +144,18 @@ func regHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type JWTToken struct {
-	Token string `json:"token"`
-}
+var defaultSecret = "timesheet app secret"
 
-func genJWTToken(username, id string) string {
-	return username + "_" + id
+func genJWTToken(username string, id int, secret string) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"username": username,
+		"id":       id,
+		"exp":      time.Now().Add(time.Hour * 24).Unix(),
+	})
+	if secret == "" {
+		secret = defaultSecret
+	}
+	return token.SignedString(defaultSalt)
 }
 
 func authHandler(w http.ResponseWriter, r *http.Request) {
@@ -154,26 +163,26 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
 		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
-			logAndWrite(err, w)
+			logAndWrite(err, "", w)
 			return
 		}
 		defer r.Body.Close()
 
 		un := r.FormValue("username")
-		unErrors := basicValidation("username", un, 5, 35)
+		unErrors := basicValidation("username", un, 3, 35)
 
 		var body []byte
 		if len(unErrors) == 0 {
 			uresp, err := http.Get("http://" + addr + "/db/" + pa.SdbDBName + "/user/username/" + un + ".json")
 			if err != nil {
-				logAndWrite(err, w)
+				logAndWrite(err, fmt.Sprintf("couldn't find user %q, or service %q unavailable", un, addr), w)
 				return
 			}
 			defer uresp.Body.Close()
 
-			body, err := ioutil.ReadAll(uresp.Body)
+			body, err = ioutil.ReadAll(uresp.Body)
 			if err != nil {
-				logAndWrite(err, w)
+				logAndWrite(err, "error reading user response body", w)
 				return
 			}
 
@@ -202,25 +211,32 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 		var data []map[string]interface{}
 		err = json.Unmarshal(body, &data)
 		if err != nil {
-			logAndWrite(err, w)
+			logAndWrite(err, fmt.Sprintf("error marshalling %v", body), w)
 			return
 		}
 
 		dataUn := data[0]["username"].(string)
 		dataPasswd := data[0]["passwd"].(string)
-		encodedPass := genPassword(passwd, nil)
+		encodedPass := genPassword(un+passwd, nil)
 		if dataUn != un || dataPasswd != encodedPass {
 			errMsg := "wrong username or password"
 			log.Printf("%s, expected: u: %q, p: %q, got: u: %q, p: %q\n", errMsg, dataUn, dataPasswd, un, encodedPass)
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("{\"form\": " + errMsg + "}"))
+			w.Write([]byte("{\"form\": \"" + errMsg + "\"}"))
 			return
 		}
 
-		t := JWTToken{genJWTToken(un, passwd)}
-		td, err := json.Marshal(t)
+		st, err := genJWTToken(un, int(data[0]["id"].(float64)), "")
 		if err != nil {
-			log.Printf("data: %v, error: %v", t, err)
+			logAndWrite(err, "error generating JWT token", w)
+			return
+		}
+		tc := struct {
+			Token string `json:"accessToken"`
+		}{st}
+		td, err := json.Marshal(tc)
+		if err != nil {
+			log.Printf("data: %v, error: %v", tc, err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}

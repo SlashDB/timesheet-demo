@@ -7,26 +7,35 @@
     <link rel="stylesheet" href="static/assets/css/bootstrap.css" />
     <script src="static/assets/js/jquery.js"></script>
     <script src="static/assets/js/vue.js"></script>
+    <!--[if lte IE 9]>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Base64/0.3.0/base64.min.js"></script>
+    <![endif]-->
 </head>
 
 <body>
     <div id="app">
-        <nav class="navbar navbar-inverse bg-inverse">
-            <a class="navbar-brand" href="">timesheet app</a>
+        <nav class="navbar navbar-toggleable-md navbar-inverse bg-inverse">
+            <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <a class="navbar-brand" href="#">timesheet app</a>
 
-            <ul class="navbar-nav navbar-toggler-right" v-show="view === 'projects'" @click="setView('login')">
-                <li class="nav-item">
-                    <button type="button" class="btn btn-link nav-link">Logout</button>
-                </li>
-            </ul>
+            <div class="collapse navbar-collapse" id="navbarText">
+                <span class="navbar-text"><user :name="userName"/></span>
+                <ul class="navbar-nav mr-auto" v-show="view === 'projects'">
+                    <li class="nav-item active">
+                        <a class="nav-link" href="#" @click.prevent="logOut">Logout</a>
+                    </li>
+                </ul>
+            </div>
         </nav>
 
         <div class="container">
             <div v-if="view === 'login' || view === 'register'">
-                <auth-card :view="view" @set-view="setView"/>
+                <auth-card :view="view" @set-view="setView" @store-auth-info="storeAuthInfo" />
             </div>
             <div v-if="view === 'projects'">
-                <project-list/>
+                <project-list :user-id="userId" />
             </div>
         </div>
     </div>
