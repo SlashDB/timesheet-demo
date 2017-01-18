@@ -253,10 +253,61 @@
         }
     });
 
+    Vue.component('NewProject', {
+        template: `
+        <div class="card text-center">
+            <div class="card-block">
+                <h4 class="card-title">New project</h4>
+                <form @submit.prevent="create">
+                    <div class="form-group" :class="{'has-danger': name.errors.length > 0}">
+                        <label for="name">Name</label>
+                        <input type="name"
+                               class="form-control form-control-sm"id="name"
+                               :class="{'form-control-danger': name.errors.length > 0}"
+                               :model="name.value"
+                               aria-describedby="emailHelp" placeholder="Enter a name">
+                        <input-errors :errors="name.errors"/>
+                    </div>
+                    <div class="form-group" :class="{'has-danger': description.errors.length > 0}">
+                        <label for="description">Description</label>
+                        <textarea
+                            class="form-control form-control-sm"
+                            :class="{'form-control-danger': description.errors.length > 0}"
+                            :model="description.value"
+                            id="description" rows="3">
+                        </textarea>
+                        <input-errors :errors="description.errors"/>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create</button>
+                </form>
+            </div>
+        </div>
+        `,
+        data: function () {
+            return {
+                name: {
+                    value: '',
+                    errors: []
+                },
+                description: {
+                    value: '',
+                    errors: []
+                }
+            }
+        },
+        methods: {
+            create: function () {
+                var t = this,
+                    ks = Object.keys(t._data);
+            }
+        }
+    });
+
     Vue.component('ProjectList', {
         template: `
         <div class="mt-3">
-            <div v-if="pids.length > 0">
+            <new-project/>
+            <div v-if="pids.length > 0" class="mt-3">
                 <div class="card mb-3" v-for="pid in pids">
                     <div class="card-header">
                         <span><strong>{{ projects[pid].data.name }}</strong></span>
@@ -297,7 +348,7 @@
                     </div>
                 </div>
             </div>
-            <div v-else class="card mb-3 text-center">
+            <div v-else class="card text-center mt-3">
                 <div class="card-block">
                     <h4 class="card-title">You have no project yet.</h4>
                 </div>
