@@ -256,43 +256,50 @@
     Vue.component('ProjectList', {
         template: `
         <div class="mt-3">
-            <div class="card mb-3" v-for="pid in pids">
-                <div class="card-header">
-                    <span><strong>{{ projects[pid].data.name }}</strong></span>
-                    <span class="float-sm-right float-md-right float-lg-right">
-                        total duration: <strong>{{ sumDuration(projects[pid]) }}</strong> hours
-                    </span>
-                </div>
-                <div class="card-block">
-                    <div class="card" v-for="timesheet in projects[pid].timesheets">
-                        <div class="card-block">
-                            <form>
-                                <fieldset disabled readonly>
-                                    <div class="form-group">
-                                        <label for="date">Timestamp</label>
-                                        <input type="text"
-                                               v-model="timesheet.date"
-                                               id="date" class="form-control"
-                                               placeholder="timestamp">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="duration">Duration</label>
-                                        <input type="text"
-                                               v-model="timesheet.duration"
-                                               id="duration" class="form-control"
-                                               placeholder="duration">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="accomplishment">Accomplishment</label>
-                                        <textarea type="text"
-                                                  v-model="timesheet.accomplishments"
-                                                  id="accomplishment" class="form-control"
-                                                  placeholder="accomplishment"></textarea>
-                                    </div>
-                                </fieldset>
-                            </form>
+            <div v-if="pids.length > 0">
+                <div class="card mb-3" v-for="pid in pids">
+                    <div class="card-header">
+                        <span><strong>{{ projects[pid].data.name }}</strong></span>
+                        <span class="float-sm-right float-md-right float-lg-right">
+                            total duration: <strong>{{ sumDuration(projects[pid]) }}</strong> hours
+                        </span>
+                    </div>
+                    <div class="card-block">
+                        <div class="card" v-for="timesheet in projects[pid].timesheets">
+                            <div class="card-block">
+                                <form>
+                                    <fieldset disabled readonly>
+                                        <div class="form-group">
+                                            <label for="date">Timestamp</label>
+                                            <input type="text"
+                                                v-model="timesheet.date"
+                                                id="date" class="form-control"
+                                                placeholder="timestamp">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="duration">Duration</label>
+                                            <input type="text"
+                                                v-model="timesheet.duration"
+                                                id="duration" class="form-control"
+                                                placeholder="duration">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="accomplishment">Accomplishment</label>
+                                            <textarea type="text"
+                                                    v-model="timesheet.accomplishments"
+                                                    id="accomplishment" class="form-control"
+                                                    placeholder="accomplishment"></textarea>
+                                        </div>
+                                    </fieldset>
+                                </form>
+                            </div>
                         </div>
                     </div>
+                </div>
+            </div>
+            <div v-else class="card mb-3 text-center">
+                <div class="card-block">
+                    <h4 class="card-title">You have no project yet.</h4>
                 </div>
             </div>
         </div>
@@ -376,6 +383,9 @@
         el: '#app',
         methods: {
             storeAuthInfo: function (authInfo) {
+                this.authInfo = authInfo;
+                this.userId = authInfo.payload.id;
+                this.userName = authInfo.payload.username;
                 localStorage.setItem(this.lsAuthInfoKey, JSON.stringify(authInfo));
             },
             restoreAuthInfo: function (key) {
