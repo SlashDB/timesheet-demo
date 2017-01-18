@@ -82,7 +82,7 @@
                     url: '/app/auth/',
                     data: {
                         username: t.username.value,
-                        password: t.password.value,
+                        password: t.password.value
                     },
                     dataType: 'json',
                     type: 'POST',
@@ -189,7 +189,7 @@
                     data: {
                         username: t.username.value,
                         email: t.email.value,
-                        password: t.password.value,
+                        password: t.password.value
                     },
                     dataType: 'json',
                     type: 'POST',
@@ -264,7 +264,7 @@
                         <input type="name"
                                class="form-control form-control-sm"id="name"
                                :class="{'form-control-danger': name.errors.length > 0}"
-                               :model="name.value"
+                               v-model="name.value"
                                aria-describedby="emailHelp" placeholder="Enter a name">
                         <input-errors :errors="name.errors"/>
                     </div>
@@ -273,7 +273,7 @@
                         <textarea
                             class="form-control form-control-sm"
                             :class="{'form-control-danger': description.errors.length > 0}"
-                            :model="description.value"
+                            v-model="description.value"
                             id="description" rows="3">
                         </textarea>
                         <input-errors :errors="description.errors"/>
@@ -287,18 +287,68 @@
             return {
                 name: {
                     value: '',
-                    errors: []
+                    errors: [],
+                    required: true
                 },
                 description: {
                     value: '',
-                    errors: []
+                    errors: [],
+                    required: true
                 }
-            }
+            };
         },
         methods: {
             create: function () {
                 var t = this,
-                    ks = Object.keys(t._data);
+                    ks = Object.keys(t._data),
+                    data = {
+                        name: t.name.value,
+                        description: t.description.value
+                    };
+
+                $.ajax({
+                    url: getURL('/project.json'),
+                    type: "POST",
+                    data: JSON.stringify(data),
+                    contentType: "application/json; charset=utf-8",
+                    success: function (resp) {
+                        var tdata = {
+                            project_id: resp.split('/').pop(),
+                            user_id: t.userId,
+                            duration: 0,
+                            accomplishments: ''
+                        };
+
+                        $.ajax({
+                            url: getURL('/timesheet.json'),
+                            type: "POST",
+                            data: JSON.stringify(tdata),
+                            contentType: "application/json; charset=utf-8",
+                            error: function (resp) {
+                                // ignore errors - bb issue #360
+                                var ld = {
+                                    data: $.extend({
+                                        id: tdata.project_id
+                                    }, data),
+                                    timesheets: []
+                                };
+                                t.$emit('project-created', ld);
+                                resetFields(t, ['name', 'description']);
+                            }
+                        });
+                    },
+                    error: function (resp) {
+                        if (resp.status != 201) {
+                            console.log(resp);
+                        }
+                    }
+                });
+            }
+        },
+        props: {
+            userId: {
+                type: Number,
+                default: -1,
             }
         }
     });
@@ -306,7 +356,7 @@
     Vue.component('ProjectList', {
         template: `
         <div class="mt-3">
-            <new-project/>
+            <new-project :userId="userId" @project-created="addProject"/>
             <div v-if="pids.length > 0" class="mt-3">
                 <div class="card mb-3" v-for="pid in pids">
                     <div class="card-header">
@@ -367,21 +417,23 @@
                         var t, pid;
                         for (var i = 0, l = timesheets.length; i < l; i++) {
                             t = timesheets[i];
-                            pid = t['project_id'];
+                            pid = t.project_id;
                             if (data.projects[pid] == null) {
                                 data.projects[pid] = {
                                     timesheets: [],
                                     data: {}
                                 };
                             }
-                            data.projects[pid]['timesheets'].push(t);
+                            if (t.duration >= 0.01) {
+                                data.projects[pid].timesheets.push(t);
+                            }
                         }
 
-                        data.pids = Object.keys(data.projects);
-                        for (var i = 0, l = data.pids.length; i < l; i++) {
-                            var pid = data.pids[i];
+                        data.pids = Object.keys(data.projects).reverse();
+                        for (i = 0, l = data.pids.length; i < l; i++) {
+                            pid = data.pids[i];
                             $.ajax({
-                                url: getURL('/project/id/' + pid + '.json'),
+                                url: getURL('/project/id/' + pid + '.json?sort=timestamp'),
                                 type: 'GET',
                                 async: false,
                                 cache: false,
@@ -398,6 +450,10 @@
             return data;
         },
         methods: {
+            addProject: function (project) {
+                this.pids.splice(0, 0, project.data.id);
+                this.projects[project.data.id] = project;
+            },
             formatDateTime: function (value) {
                 var d = new Date(value);
                 return d.toLocaleTimeString() + ", " + d.toLocaleDateString();
