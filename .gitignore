@@ -6,6 +6,8 @@ build/
 node_modules/
 typings/
 
+cSpell.json
+
 bindata.go
 timesheet-linux64
 timesheet-osx64
