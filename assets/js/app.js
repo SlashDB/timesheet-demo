@@ -54,7 +54,7 @@
         return true;
     };
 
-    var formValid = function (obj) {
+    var isFormValid = function (obj) {
         var formValid = true,
             keys = Object.keys(obj),
             reqMsg = 'this field is required',
@@ -138,7 +138,7 @@
             login: function ($event) {
                 var t = this;
 
-                if (formValid(t._data)) {
+                if (isFormValid(t._data)) {
                     var ks = Object.keys(t._data);
 
                     $.ajax({
@@ -250,7 +250,7 @@
             register: function () {
                 var t = this;
 
-                if (formValid(t._data)) {
+                if (isFormValid(t._data)) {
                     var ks = Object.keys(t._data),
                         data = {
                             username: this.username.value,
@@ -371,8 +371,8 @@
                 now.setMinutes(now.getMinutes() + minOffset);
                 return now.toDateTimeInputValue();
             },
-            localFormValid: function () {
-                var tmp = formValid(this._data);
+            localIsFormValid: function () {
+                var tmp = isFormValid(this._data);
                 if (!tmp) {
                     return false;
                 }
@@ -398,7 +398,7 @@
                 return true;
             },
             create: function () {
-                if (this.localFormValid()) {
+                if (this.localIsFormValid()) {
                     var data = {
                         duration: this.duration.value,
                         accomplishments: this.accomplishments.value,
@@ -501,7 +501,7 @@
         },
         methods: {
             create: function () {
-                if (formValid(this._data)) {
+                if (isFormValid(this._data)) {
                     var data = {
                         name: this.name.value,
                         description: this.description.value
@@ -558,17 +558,10 @@
                     <div class="card-block">
                         <new-timesheet :userId="userId" :projectId="Number(pid)" @timesheet-created="addTimesheet"/>
                         <div class="card mt-2" v-for="timesheet in projects[pid].timesheets">
+                            <div class="card-header">created: <strong>{{ timesheet.date | formatDateTime }}</strong></div>
                             <div class="card-block">
-                                <h5 class="card-title">Created</h5>
-                                <p>{{ timesheet.date | formatDateTime }}</p>
-                            </div>
-                            <div class="card-block">
-                                <h5 class="card-title">Duration</h5>
-                                <p>{{ timesheet.duration }} hours</p>
-                            </div>
-                            <div class="card-block">
-                                <h5 class="card-title">Accomplished</h5>
-                                <p>{{ timesheet.accomplishments }}</p>
+                                <h6 class="card-subtitle mb-2 text-muted">duration: <strong>{{ timesheet.duration }}</strong> hours</h6>
+                                <p class="card-text" style="word-wrap:break-word;">accomplished: <strong>{{ timesheet.accomplishments }}</strong></p>
                             </div>
                         </div>
                     </div>
@@ -631,13 +624,14 @@
                 this.projects[timesheet.project_id].timesheets.splice(0, 0, timesheet);
             },
             sumDuration: function (project) {
-                return project.timesheets
+                var tmp = project.timesheets
                     .map(function (el) {
                         return el.duration || 0;
                     })
                     .reduce(function (a, b) {
                         return a + b;
                     }, 0);
+                return Number(tmp.toFixed(2));
             },
         },
         filters: {
