@@ -407,7 +407,7 @@
                     };
 
                     this.$http.post(getURL('/timesheet.json'), data)
-                        .then(function () {}, function (resp) {
+                        .then(function () { }, function (resp) {
                             // ignore errors - bitbucket issue #360
                             if (resp.status == 500) {
                                 var ld = extend({
@@ -516,7 +516,7 @@
                                 accomplishments: ''
                             };
 
-                            this.$http.post(getURL('/timesheet.json'), tdata).then(function () {}, function (resp) {
+                            this.$http.post(getURL('/timesheet.json'), tdata).then(function () { }, function (resp) {
                                 // ignore 500 errors - bitbucket issue #360
                                 if (resp.status == 500) {
                                     var ld = {
@@ -583,10 +583,10 @@
                             timesheet = timesheets[i];
                             pid = timesheet.project_id;
                             if (this.projects[pid] == null) {
-                                this.projects[pid] = {
+                                this.$set(this.projects, pid, {
                                     timesheets: [],
                                     data: {}
-                                };
+                                });
                             }
                             if (timesheet.duration >= 0.01) {
                                 this.projects[pid].timesheets.push(timesheet);
@@ -618,7 +618,7 @@
         methods: {
             addProject: function (project) {
                 this.pids.splice(0, 0, project.data.id);
-                this.projects[project.data.id] = project;
+                this.$set(this.projects, project.data.id, project);
             },
             addTimesheet: function (timesheet) {
                 this.projects[timesheet.project_id].timesheets.splice(0, 0, timesheet);
