@@ -14,7 +14,8 @@ import (
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 )
 
-type ArgFlags struct {
+// ParsedArgs - cointainer for parsed CLI args.
+type ParsedArgs struct {
 	Interf          string
 	Port            uint
 	SdbInstanceAddr string
@@ -23,7 +24,7 @@ type ArgFlags struct {
 }
 
 var (
-	pa   = &ArgFlags{}
+	pa   = &ParsedArgs{}
 	addr string
 )
 
