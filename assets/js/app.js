@@ -394,7 +394,7 @@
                 }
 
                 // lets set duration
-                this.duration.value = Number(msToH(to - from).toFixed(3));
+                this.duration.value = Number(msToH(to - from).toFixed(2));
                 return true;
             },
             create: function () {
@@ -559,31 +559,16 @@
                         <new-timesheet :userId="userId" :projectId="Number(pid)" @timesheet-created="addTimesheet"/>
                         <div class="card mt-2" v-for="timesheet in projects[pid].timesheets">
                             <div class="card-block">
-                                <form>
-                                    <fieldset disabled readonly>
-                                        <div class="form-group">
-                                            <label for="date">Timestamp</label>
-                                            <input type="text"
-                                                v-model="timesheet.date"
-                                                id="date" class="form-control"
-                                                placeholder="timestamp">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="duration">Duration</label>
-                                            <input type="text"
-                                                v-model="timesheet.duration"
-                                                id="duration" class="form-control"
-                                                placeholder="duration">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="accomplishment">Accomplishment</label>
-                                            <textarea type="text"
-                                                    v-model="timesheet.accomplishments"
-                                                    id="accomplishment" class="form-control"
-                                                    placeholder="accomplishment"></textarea>
-                                        </div>
-                                    </fieldset>
-                                </form>
+                                <h5 class="card-title">Created</h5>
+                                <p>{{ timesheet.date | formatDateTime }}</p>
+                            </div>
+                            <div class="card-block">
+                                <h5 class="card-title">Duration</h5>
+                                <p>{{ timesheet.duration }} hours</p>
+                            </div>
+                            <div class="card-block">
+                                <h5 class="card-title">Accomplished</h5>
+                                <p>{{ timesheet.accomplishments }}</p>
                             </div>
                         </div>
                     </div>
@@ -654,9 +639,11 @@
                         return a + b;
                     }, 0);
             },
+        },
+        filters: {
             formatDateTime: function (value) {
-                var d = new Date(value);
-                return d.toLocaleTimeString() + ", " + d.toLocaleDateString();
+                var d = new Date(value).toDateTimeInputValue().split('T');
+                return d[0] + ", " + d[1];
             }
         },
         props: {
