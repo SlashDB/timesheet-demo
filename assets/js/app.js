@@ -26,6 +26,28 @@
         }
     };
 
+    var formValid = function (obj) {
+        var formValid = true,
+            keys = Object.keys(obj),
+            reqMsg = 'this field is required',
+            field, reqMsgIdx;
+
+        for (var i = 0, l = keys.length; i < l; i++) {
+            field = obj[keys[i]];
+            reqMsgIdx = field.errors.indexOf(reqMsg);
+
+            if ((field.required || false) && !Boolean(field.value)) {
+                if (reqMsgIdx === -1) {
+                    field.errors.push(reqMsg);
+                }
+                formValid = false;
+            } else {
+                field.errors.splice(reqMsgIdx, 1);
+            }
+        }
+        return formValid;
+    };
+
     Vue.component('LoginForm', {
         template: `
         <form @submit.prevent="login">
@@ -54,11 +76,13 @@
             return {
                 username: {
                     value: '',
-                    errors: []
+                    errors: [],
+                    required: true
                 },
                 password: {
                     value: '',
-                    errors: []
+                    errors: [],
+                    required: true
                 },
                 form: {
                     errors: []
@@ -75,29 +99,32 @@
                 return authInfo;
             },
             login: function ($event) {
-                var t = this,
-                    ks = Object.keys(t._data);
+                var t = this;
 
-                $.ajax({
-                    url: '/app/auth/',
-                    data: {
-                        username: t.username.value,
-                        password: t.password.value
-                    },
-                    dataType: 'json',
-                    type: 'POST',
-                    success: function (resp) {
-                        resetFields(t, ks);
-                        t.$emit('logged-in', t.createAuthInfo(resp.accessToken));
-                    },
-                    error: function (resp) {
-                        var k;
-                        for (var i = 0, l = ks.length; i < l; i++) {
-                            k = ks[i];
-                            t[k].errors = resp.responseJSON[k] || [];
+                if (formValid(t._data)) {
+                    var ks = Object.keys(t._data);
+
+                    $.ajax({
+                        url: '/app/auth/',
+                        data: {
+                            username: t.username.value,
+                            password: t.password.value
+                        },
+                        dataType: 'json',
+                        type: 'POST',
+                        success: function (resp) {
+                            resetFields(t, ks);
+                            t.$emit('logged-in', t.createAuthInfo(resp.accessToken));
+                        },
+                        error: function (resp) {
+                            var k;
+                            for (var i = 0, l = ks.length; i < l; i++) {
+                                k = ks[i];
+                                t[k].errors = resp.responseJSON[k] || [];
+                            }
                         }
-                    }
-                });
+                    });
+                }
             }
         }
     });
@@ -151,15 +178,18 @@
             return {
                 username: {
                     value: '',
-                    errors: []
+                    errors: [],
+                    required: true
                 },
                 email: {
                     value: '',
-                    errors: []
+                    errors: [],
+                    required: true
                 },
                 password: {
                     value: '',
-                    errors: []
+                    errors: [],
+                    required: true
                 },
                 password2: {
                     value: '',
@@ -181,35 +211,38 @@
                 this.password2.errors.pop();
             },
             register: function () {
-                var t = this,
-                    ks = Object.keys(t._data);
+                var t = this;
 
-                $.ajax({
-                    url: '/app/reg/',
-                    data: {
-                        username: t.username.value,
-                        email: t.email.value,
-                        password: t.password.value
-                    },
-                    dataType: 'json',
-                    type: 'POST',
-                    success: function (resp) {
-                        resetFields(t, ks);
-                        t.$emit('registered');
-                    },
-                    error: function (resp) {
-                        if (resp.status != 201) {
-                            var k;
-                            for (var i = 0, l = ks.length; i < l; i++) {
-                                k = ks[i];
-                                t[k].errors = resp.responseJSON[k] || [];
-                            }
-                        } else {
+                if (formValid(t._data)) {
+                    var ks = Object.keys(t._data);
+
+                    $.ajax({
+                        url: '/app/reg/',
+                        data: {
+                            username: t.username.value,
+                            email: t.email.value,
+                            password: t.password.value
+                        },
+                        dataType: 'json',
+                        type: 'POST',
+                        success: function (resp) {
                             resetFields(t, ks);
                             t.$emit('registered');
+                        },
+                        error: function (resp) {
+                            if (resp.status != 201) {
+                                var k;
+                                for (var i = 0, l = ks.length; i < l; i++) {
+                                    k = ks[i];
+                                    t[k].errors = resp.responseJSON[k] || [];
+                                }
+                            } else {
+                                resetFields(t, ks);
+                                t.$emit('registered');
+                            }
                         }
-                    }
-                });
+                    });
+                }
             }
         }
     });
@@ -265,7 +298,7 @@
                                class="form-control form-control-sm"id="name"
                                :class="{'form-control-danger': name.errors.length > 0}"
                                v-model="name.value"
-                               aria-describedby="emailHelp" placeholder="Enter a name">
+                               aria-describedby="emailHelp" placeholder="enter a project name">
                         <input-errors :errors="name.errors"/>
                     </div>
                     <div class="form-group" :class="{'has-danger': description.errors.length > 0}">
@@ -299,50 +332,52 @@
         },
         methods: {
             create: function () {
-                var t = this,
-                    ks = Object.keys(t._data),
-                    data = {
+                var t = this;
+
+                if (formValid(t._data)) {
+                    var data = {
                         name: t.name.value,
                         description: t.description.value
                     };
 
-                $.ajax({
-                    url: getURL('/project.json'),
-                    type: "POST",
-                    data: JSON.stringify(data),
-                    contentType: "application/json; charset=utf-8",
-                    success: function (resp) {
-                        var tdata = {
-                            project_id: resp.split('/').pop(),
-                            user_id: t.userId,
-                            duration: 0,
-                            accomplishments: ''
-                        };
+                    $.ajax({
+                        url: getURL('/project.json'),
+                        type: "POST",
+                        data: JSON.stringify(data),
+                        contentType: "application/json; charset=utf-8",
+                        success: function (resp) {
+                            var tdata = {
+                                project_id: resp.split('/').pop(),
+                                user_id: t.userId,
+                                duration: 0,
+                                accomplishments: ''
+                            };
 
-                        $.ajax({
-                            url: getURL('/timesheet.json'),
-                            type: "POST",
-                            data: JSON.stringify(tdata),
-                            contentType: "application/json; charset=utf-8",
-                            error: function (resp) {
-                                // ignore errors - bb issue #360
-                                var ld = {
-                                    data: $.extend({
-                                        id: tdata.project_id
-                                    }, data),
-                                    timesheets: []
-                                };
-                                t.$emit('project-created', ld);
-                                resetFields(t, ['name', 'description']);
+                            $.ajax({
+                                url: getURL('/timesheet.json'),
+                                type: "POST",
+                                data: JSON.stringify(tdata),
+                                contentType: "application/json; charset=utf-8",
+                                error: function (resp) {
+                                    // ignore errors - bitbucket issue #360
+                                    var ld = {
+                                        data: $.extend({
+                                            id: tdata.project_id
+                                        }, data),
+                                        timesheets: []
+                                    };
+                                    t.$emit('project-created', ld);
+                                    resetFields(t, ['name', 'description']);
+                                }
+                            });
+                        },
+                        error: function (resp) {
+                            if (resp.status != 201) {
+                                console.log(resp);
                             }
-                        });
-                    },
-                    error: function (resp) {
-                        if (resp.status != 201) {
-                            console.log(resp);
                         }
-                    }
-                });
+                    });
+                }
             }
         },
         props: {
