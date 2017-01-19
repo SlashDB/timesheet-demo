@@ -16,6 +16,15 @@
 
     // some utility functions
 
+    var extend = function (obj1, obj2) {
+        // extends object with the content of another
+        for (var idx = 0, keys = Object.keys(obj2), len = keys.length, key; idx < len; idx++) {
+            key = keys[idx];
+            obj1[key] = obj2[key];
+        }
+        return obj1;
+    };
+
     var msToH = function (ms) {
         // converts milliseconds to hours
         return ms * 2.777777777777778e-7;
@@ -242,15 +251,16 @@
                 var t = this;
 
                 if (formValid(t._data)) {
-                    var ks = Object.keys(t._data);
+                    var ks = Object.keys(t._data),
+                        data = {
+                            username: this.username.value,
+                            email: this.email.value,
+                            password: this.password.value
+                        };
 
                     $.ajax({
                         url: '/app/reg/',
-                        data: {
-                            username: t.username.value,
-                            email: t.email.value,
-                            password: t.password.value
-                        },
+                        data: data,
                         dataType: 'json',
                         type: 'POST',
                         success: function (resp) {
@@ -347,7 +357,7 @@
                         </textarea>
                         <input-errors :errors="accomplishments.errors"/>
                     </div>
-                    <button type="submit" class="btn btn-primary">Create</button>
+                    <button type="submit" class="btn btn-sm btn-primary">Create</button>
                 </form>
             </div>
         </div>
@@ -388,30 +398,27 @@
                 return true;
             },
             create: function () {
-                var t = this;
-
-                if (t.localFormValid()) {
+                if (this.localFormValid()) {
                     var data = {
-                        duration: t.duration.value,
-                        accomplishments: t.accomplishments.value,
-                        project_id: t.projectId,
-                        user_id: t.userId
+                        duration: this.duration.value,
+                        accomplishments: this.accomplishments.value,
+                        project_id: this.projectId,
+                        user_id: this.userId
                     };
 
-                    $.ajax({
-                        url: getURL('/timesheet.json'),
-                        type: "POST",
-                        data: JSON.stringify(data),
-                        contentType: "application/json; charset=utf-8",
-                        error: function (resp) {
+                    this.$http.post(getURL('/timesheet.json'), data)
+                        .then(function () {}, function (resp) {
                             // ignore errors - bitbucket issue #360
-                            var ld = $.extend({
-                                date: new Date().toDateTimeInputValue(19)
-                            }, data);
-                            t.$emit('timesheet-created', ld);
-                            resetFields(t, ['accomplishments']);
-                        }
-                    });
+                            if (resp.status == 500) {
+                                var ld = extend({
+                                    date: new Date().toDateTimeInputValue(19)
+                                }, data);
+                                this.$emit('timesheet-created', ld);
+                                resetFields(this, ['accomplishments']);
+                            } else {
+                                console.log(resp);
+                            }
+                        });
                 }
             }
         },
@@ -473,7 +480,7 @@
                         </textarea>
                         <input-errors :errors="description.errors"/>
                     </div>
-                    <button type="submit" class="btn btn-primary">Create</button>
+                    <button type="submit" class="btn btn-sm btn-primary">Create</button>
                 </form>
             </div>
         </div>
@@ -494,51 +501,37 @@
         },
         methods: {
             create: function () {
-                var t = this;
-
-                if (formValid(t._data)) {
+                if (formValid(this._data)) {
                     var data = {
-                        name: t.name.value,
-                        description: t.description.value
+                        name: this.name.value,
+                        description: this.description.value
                     };
 
-                    $.ajax({
-                        url: getURL('/project.json'),
-                        type: "POST",
-                        data: JSON.stringify(data),
-                        contentType: "application/json; charset=utf-8",
-                        success: function (resp) {
+                    this.$http.post(getURL('/project.json'), data)
+                        .then(function (resp) {
                             var tdata = {
-                                project_id: resp.split('/').pop(),
-                                user_id: t.userId,
+                                project_id: resp.data.split('/').pop(),
+                                user_id: this.userId,
                                 duration: 0,
                                 accomplishments: ''
                             };
 
-                            $.ajax({
-                                url: getURL('/timesheet.json'),
-                                type: "POST",
-                                data: JSON.stringify(tdata),
-                                contentType: "application/json; charset=utf-8",
-                                error: function (resp) {
-                                    // ignore errors - bitbucket issue #360
+                            this.$http.post(getURL('/timesheet.json'), tdata).then(function () {}, function (resp) {
+                                // ignore 500 errors - bitbucket issue #360
+                                if (resp.status == 500) {
                                     var ld = {
-                                        data: $.extend({
+                                        data: extend({
                                             id: tdata.project_id
                                         }, data),
                                         timesheets: []
                                     };
-                                    t.$emit('project-created', ld);
-                                    resetFields(t, ['name', 'description']);
+                                    this.$emit('project-created', ld);
+                                    resetFields(this, Object.keys(data));
+                                } else {
+                                    console.log(resp);
                                 }
                             });
-                        },
-                        error: function (resp) {
-                            if (resp.status != 201) {
-                                console.log(resp);
-                            }
-                        }
-                    });
+                        });
                 }
             }
         },
@@ -605,39 +598,35 @@
         `,
         mounted: function () {
             if (this.userId !== -1) {
-                var t = this;
-                $.getJSON(getURL('/timesheet/user_id/' + t.userId + '.json'))
-                    .then(function (timesheets) {
-                        var timesheet, project, pid;
+                this.$http.get(getURL('/timesheet/user_id/' + this.userId + '.json'))
+                    .then(function (resp) {
+                        var timesheet, project, pid, timesheets = resp.data;
                         for (var i = timesheets.length - 1; i >= 0; i--) {
                             timesheet = timesheets[i];
                             pid = timesheet.project_id;
-                            if (t.projects[pid] == null) {
-                                t.projects[pid] = {
+                            if (this.projects[pid] == null) {
+                                this.projects[pid] = {
                                     timesheets: [],
                                     data: {}
                                 };
                             }
                             if (timesheet.duration >= 0.01) {
-                                t.projects[pid].timesheets.push(t);
+                                this.projects[pid].timesheets.push(timesheet);
                             }
                         }
+                    })
+                    .then(function () {
+                        this.pids = Object.keys(this.projects).reverse();
 
-                        t.pids = Object.keys(t.projects).reverse();
-                        for (i = 0, l = t.pids.length; i < l; i++) {
-                            pid = t.pids[i];
-                            $.ajax({
-                                url: getURL('/project/id/' + pid + '.json'),
-                                type: 'GET',
-                                async: false,
-                                cache: false,
-                                timeout: 30000,
-                                success: function (pdata) {
-                                    $.extend(t.projects[pid].data, pdata);
-                                    console.log(t.projects[pid].data);
-                                }
-                            });
+                        var successH = function (pid) {
+                            return function (resp) {
+                                extend(this.projects[pid].data, resp.data);
+                            };
+                        }
 
+                        for (var i = 0, l = this.pids.length, pid; i < l; i++) {
+                            pid = this.pids[i];
+                            this.$http.get(getURL('/project/id/' + pid + '.json')).then(successH(pid));
                         }
                     });
             }
