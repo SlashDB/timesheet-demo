@@ -1,10 +1,13 @@
 (function () {
     'use strict';
 
-    Date.prototype.toDateTimeInputValue = (function () {
+    Date.prototype.toDateTimeInputValue = (function (cutBy) {
+        if (cutBy == null) {
+            cutBy = 16;
+        }
         var local = new Date(this);
         local.setMinutes(this.getMinutes() - this.getTimezoneOffset());
-        return local.toJSON().slice(0, 16);
+        return local.toJSON().slice(0, cutBy);
     });
 
     var getURL = function (s) {
@@ -81,7 +84,7 @@
                 <input type="text" class="form-control"
                        :class="{'form-control-danger': username.errors.length > 0}"
                        id="username"
-                       v-model="username.value"
+                       v-model.trim="username.value"
                        placeholder="enter user name">
                 <input-errors :errors="username.errors"/>
             </div>
@@ -90,7 +93,7 @@
                 <input type="password" class="form-control"
                        :class="{'form-control-danger': username.errors.length > 0}"
                        id="password"
-                       v-model="password.value"
+                       v-model.trim="password.value"
                        placeholder="enter password">
                 <input-errors :errors="password.errors"/>
             </div>
@@ -162,7 +165,7 @@
                 <input type="text" class="form-control"
                        :class="{'form-control-danger': username.errors.length > 0}"
                        id="username"
-                       v-model="username.value"
+                       v-model.trim="username.value"
                        placeholder="enter your new user name">
                 <input-errors :errors="username.errors"/>
             </div>
@@ -172,7 +175,7 @@
                        :class="{'form-control-danger': email.errors.length > 0}"
                        class="form-control"
                        id="email"
-                       v-model="email.value"
+                       v-model.trim="email.value"
                        placeholder="enter your email address">
                 <input-errors :errors="email.errors"/>
             </div>
@@ -182,7 +185,7 @@
                        :class="{'form-control-danger': password.errors.length > 0}"
                        @keyup="isTheSamePass"
                        id="password"
-                       v-model="password.value"
+                       v-model.trim="password.value"
                        placeholder="enter user password">
                 <input-errors :errors="password.errors"/>
             </div>
@@ -191,7 +194,7 @@
                        :class="{'form-control-danger': password2.errors.length > 0}"
                        @keyup="isTheSamePass"
                        id="password2"
-                       v-model="password2.value"
+                       v-model.trim="password2.value"
                        placeholder="re-enter user password">
                 <input-errors :errors="password2.errors"/>
                 <small class="form-text text-muted">You need to re-enter the password above.</small>
@@ -319,7 +322,7 @@
                     <div class="form-group" :class="{'has-danger': durationFrom.errors.length > 0}">
                         <label for="duration-from">Duration from</label>
                         <input type="datetime-local"
-                               v-model="durationFrom.value"
+                               v-model.trim="durationFrom.value"
                                class="form-control form-control-sm" id="duration-from"
                                :class="{'form-control-danger': durationFrom.errors.length > 0}"
                                aria-describedby="durationFromHelp">
@@ -328,7 +331,7 @@
                     <div class="form-group" :class="{'has-danger': durationTo.errors.length > 0}">
                         <label for="duration-from">to</label>
                         <input type="datetime-local"
-                               v-model="durationTo.value"
+                               v-model.trim="durationTo.value"
                                class="form-control form-control-sm" id="duration-from"
                                :class="{'form-control-danger': durationTo.errors.length > 0}"
                                aria-describedby="durationToHelp">
@@ -339,7 +342,7 @@
                         <textarea
                             class="form-control form-control-sm"
                             :class="{'form-control-danger': accomplishments.errors.length > 0}"
-                            v-model="accomplishments.value"
+                            v-model.trim="accomplishments.value"
                             id="accomplishments" rows="3">
                         </textarea>
                         <input-errors :errors="accomplishments.errors"/>
@@ -376,7 +379,7 @@
                     return false;
                 }
 
-                if (!checkIfValid(from > to, this.durationFrom.errors, 'from must be before to')) {
+                if (!checkIfValid(to < from, this.durationFrom.errors, 'from must be before to')) {
                     return false;
                 }
 
@@ -402,12 +405,11 @@
                         contentType: "application/json; charset=utf-8",
                         error: function (resp) {
                             // ignore errors - bitbucket issue #360
-                            var ld = {
-                                data: $.extend({}, data),
-                                timesheets: []
-                            };
+                            var ld = $.extend({
+                                date: new Date().toDateTimeInputValue(19)
+                            }, data);
                             t.$emit('timesheet-created', ld);
-                            resetFields(t, ['durationFrom', 'durationTo', 'accomplishments']);
+                            resetFields(t, ['accomplishments']);
                         }
                     });
                 }
@@ -457,7 +459,7 @@
                         <input type="name"
                                class="form-control form-control-sm" id="name"
                                :class="{'form-control-danger': name.errors.length > 0}"
-                               v-model="name.value"
+                               v-model.trim="name.value"
                                aria-describedby="nameHelp" placeholder="enter a project name">
                         <input-errors :errors="name.errors"/>
                     </div>
@@ -466,7 +468,7 @@
                         <textarea
                             class="form-control form-control-sm"
                             :class="{'form-control-danger': description.errors.length > 0}"
-                            v-model="description.value"
+                            v-model.trim="description.value"
                             id="description" rows="3">
                         </textarea>
                         <input-errors :errors="description.errors"/>
@@ -561,7 +563,7 @@
                         </span>
                     </div>
                     <div class="card-block">
-                        <new-timesheet :userId="userId" :projectId="Number(pid)"/>
+                        <new-timesheet :userId="userId" :projectId="Number(pid)" @timesheet-created="addTimesheet"/>
                         <div class="card mt-2" v-for="timesheet in projects[pid].timesheets">
                             <div class="card-block">
                                 <form>
@@ -601,58 +603,58 @@
             </div>
         </div>
         `,
-        data: function () {
-            var data = {
-                projects: {},
-                pids: []
-            };
-
+        mounted: function () {
             if (this.userId !== -1) {
-                $.getJSON(getURL('/timesheet/user_id/' + this.userId + '.json'))
+                var t = this;
+                $.getJSON(getURL('/timesheet/user_id/' + t.userId + '.json'))
                     .then(function (timesheets) {
-                        var t, pid;
-                        for (var i = 0, l = timesheets.length; i < l; i++) {
-                            t = timesheets[i];
-                            pid = t.project_id;
-                            if (data.projects[pid] == null) {
-                                data.projects[pid] = {
+                        var timesheet, project, pid;
+                        for (var i = timesheets.length - 1; i >= 0; i--) {
+                            timesheet = timesheets[i];
+                            pid = timesheet.project_id;
+                            if (t.projects[pid] == null) {
+                                t.projects[pid] = {
                                     timesheets: [],
                                     data: {}
                                 };
                             }
-                            if (t.duration >= 0.01) {
-                                data.projects[pid].timesheets.push(t);
+                            if (timesheet.duration >= 0.01) {
+                                t.projects[pid].timesheets.push(t);
                             }
                         }
 
-                        data.pids = Object.keys(data.projects).reverse();
-                        for (i = 0, l = data.pids.length; i < l; i++) {
-                            pid = data.pids[i];
+                        t.pids = Object.keys(t.projects).reverse();
+                        for (i = 0, l = t.pids.length; i < l; i++) {
+                            pid = t.pids[i];
                             $.ajax({
-                                url: getURL('/project/id/' + pid + '.json?sort=timestamp'),
+                                url: getURL('/project/id/' + pid + '.json'),
                                 type: 'GET',
                                 async: false,
                                 cache: false,
                                 timeout: 30000,
                                 success: function (pdata) {
-                                    $.extend(true, data.projects[pid].data, pdata);
+                                    $.extend(t.projects[pid].data, pdata);
+                                    console.log(t.projects[pid].data);
                                 }
                             });
 
                         }
                     });
             }
-
-            return data;
+        },
+        data: function () {
+            return {
+                projects: {},
+                pids: []
+            };
         },
         methods: {
             addProject: function (project) {
                 this.pids.splice(0, 0, project.data.id);
                 this.projects[project.data.id] = project;
             },
-            formatDateTime: function (value) {
-                var d = new Date(value);
-                return d.toLocaleTimeString() + ", " + d.toLocaleDateString();
+            addTimesheet: function (timesheet) {
+                this.projects[timesheet.project_id].timesheets.splice(0, 0, timesheet);
             },
             sumDuration: function (project) {
                 return project.timesheets
@@ -662,6 +664,10 @@
                     .reduce(function (a, b) {
                         return a + b;
                     }, 0);
+            },
+            formatDateTime: function (value) {
+                var d = new Date(value);
+                return d.toLocaleTimeString() + ", " + d.toLocaleDateString();
             }
         },
         props: {
