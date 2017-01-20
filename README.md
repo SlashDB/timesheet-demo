@@ -1,12 +1,20 @@
 # Building a simple timesheet app with SlashDB, Go and Vue
 
+## Requirements
+* [SlashDB](https://www.slashdb.com/) >= 0.9.15
+* [Go](https://golang.org/dl/) >= 1.7.4
+* [Vue](https://vuejs.org/v2/guide/installation.html) >= 2.1.10
+
+## The Code
+All the code refereed in this article is available at the [bitbucket GIT repository](https://bitbucket.org/slashdb/timesheet/src).
+
 ## The basic concept
 Is to build a simple poof of concept time tracking app, either for local use or as a network 
 available service and basing it on SlashDB.
 
-The timesheet app layout:
+### The timesheet app layout:
 ```
-RESTful API <---> small authentication/authorization proxy app <---> frontend GUI
+RESTful API <---> (small authentication/authorization proxy app <---> frontend GUI)
 ```
 What the developer needs to implement is, the frontend GUI 
 and also a way to implement authentication/authorization for the user.
@@ -34,6 +42,10 @@ On Reacts side, one-way data flow i.e. always parent node -> child node (so hard
 In general ease of use and comprehension of what the app is doing, also the awesome [dev tools](https://github.com/vuejs/vue-devtools) :)
 
 ### SlashDB Service
+
+> **Important**: This part requires you to understand the basic of *SQL* and DB server setup 
+(if you choose to use something other thant SQLite).
+
 For development purposes, SlashDB is [available for free use](https://www.slashdb.com/download/) 
 and I recommend using the [docker](https://docs.slashdb.com/user-guide/docker.html) image for an easy way to get started.
 
@@ -105,6 +117,39 @@ Also as our proxy authorization/authentication app will connect to SlashDB direc
 to set an API key for that user - in this example: *timesheet-api-key*.
 Finally, add our newly created data source to this users *Database Mappings* and *Save*. 
 Login as the *timesheet* user, and check if we have access to our tables.
-Going to the [project endpoint](http://localhost:8000/db/timesheet/project.html), we should see an empty table - but (hopefully) no errors.
+Going to the [project endpoint](http://localhost:8000/db/timesheet/project.html), 
+we should see an empty table - but (hopefully) no errors.
 
 Thats it - no you have your data provided as an RESTful API, curtesy of SlashDB :)
+
+### GoLang proxy authorization/authentication app
+
+> **Important**: This part requires you to understand some basics of programming in Go, 
+its setup (i.e. [$GOPATH/$GOROOT(https://github.com/golang/go/wiki/GOPATH)]) 
+and it's basic tooling (i.e. go get/build/install). Form more reference on that visit Go-s 
+[wiki page](https://github.com/golang/).
+
+The basic idea is to proxy all the request from the frontend to the SlashDB RESTful API 
+and on the fly do some resource authorization. 
+Also we need to provide a way to create and authenticate *timesheet* app users.
+
+In my setup, this proxy-like app will have 4 endpoints.
+```
+/          - the SlashDB proxy
+/app/      - the frontend app itself
+/app/auth/ - user login/token provider
+/app/reg/  - user registration provider
+```
+
+In the spirit of keeping it simple, as a method of of providing a kind of stateless session, we'll use [JWT](https://jwt.io/).
+The */app/auth/* endpoint will check user credentials and if everything's OK, provide a JWT token.
+
+First, things first lets install our everything we'll need:
+```
+$ go get golang.org/x/crypto/pbkdf2
+$ go get github.com/dgrijalva/jwt-go/...
+$ go get github.com/jteeuwen/go-bindata/...
+$ go get github.com/elazarl/go-bindata-assetfs/...
+```
+
+> Tip: you can just run the build.sh script to install all requirements and compile the app.
