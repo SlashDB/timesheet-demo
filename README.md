@@ -2,14 +2,15 @@
 
 ## The basic concept
 Is to build a simple poof of concept time tracking app, either for local use or as a network 
-available service and basing it on SlashDB-s REST capabilities.
+available service and basing it on SlashDB.
 
 The timesheet app layout:
 ```
-SlashDB RESTful API <---> (small authentication/authorization proxy app <---> frontend GUI)
+RESTful API <---> small authentication/authorization proxy app <---> frontend GUI
 ```
 What the developer needs to implement is, the frontend GUI 
 and also a way to implement authentication/authorization for the user.
+The RESTful part is provided to us for free by SlashDB.
 
 ## SlashDB
 For the DB back-end I will be using [SlashDB](https://www.slashdb.com/). 
@@ -45,7 +46,7 @@ $ unzip default-slashdb-configs_0.9.15.zip
 $ docker run -d -p 8000:80 -v $PWD/slashdb:/etc/slashdb -v $PWD/slashdb:/var/log/slashdb slashdb/slashdb
 ```
 
-Go to http://localhost:8000/ and follow the initial developer setup wizard.
+Go to [http://localhost:8000/](http://localhost:8000/) and follow the initial developer setup wizard.
 
 Now we need to create a database, in this example I'll be using MySQL, but any [DB engine supported by SlashDB](https://www.slashdb.com/pricing/) will do. 
 Installing/configuring MySQL server is outside of scope of this article, so I'll just skip this part. 
@@ -89,3 +90,21 @@ CREATE TABLE `timesheet` (
 
 This is MySQL-s SQL dialect, but it gives a general idea about the table layout 
 and is easy enough to adjust for other SQL dialects.
+
+After we have our DB, tables and user setup we need to make SlashDB aware of it.
+Going to [http://localhost:8000/](http://localhost:8000/) and logging-in as the *admin*,
+we can [config and add our database endpoint](https://docs.slashdb.com/user-guide/config-databases.html).
+For simplicity, I named the endpoint *timesheet*.
+In this case, I also enabled the *Auto Discover* feature and provided credentials for my MySQL user.
+Save, remembering to make sure the DB was connected without errors (green *Connected* status) and we're set.
+
+It's a good idea to create a new user for remote access to our resources, 
+so following the [docs](https://docs.slashdb.com/user-guide/config-users.html),
+I'll add a user named - you guessed it - *timesheet*. 
+Also as our proxy authorization/authentication app will connect to SlashDB directly it's a good idea 
+to set an API key for that user - in this example: *timesheet-api-key*.
+Finally, add our newly created data source to this users *Database Mappings* and *Save*. 
+Login as the *timesheet* user, and check if we have access to our tables.
+Going to the [project endpoint](http://localhost:8000/db/timesheet/project.html), we should see an empty table - but (hopefully) no errors.
+
+Thats it - no you have your data provided as an RESTful API, curtesy of SlashDB :)
