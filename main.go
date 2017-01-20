@@ -14,7 +14,7 @@ import (
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 )
 
-// ParsedArgs - cointainer for parsed CLI args.
+// ParsedArgs - container for parsed CLI args.
 type ParsedArgs struct {
 	Interf          string
 	Port            uint
