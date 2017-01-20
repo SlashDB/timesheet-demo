@@ -1,28 +1,40 @@
 # Building a simple timesheet app with SlashDB, Go and Vue
 
+## The basic concept
+Is to build a simple poof of concept time tracking app, either for local use or as a network 
+available service and basing it on SlashDB-s REST capabilities.
+
+The timesheet app layout:
+```
+SlashDB RESTful API <---> (small authentication/authorization proxy app <---> frontend GUI)
+```
+What the developer needs to implement is, the frontend GUI 
+and also a way to implement authentication/authorization for the user.
+
 ## SlashDB
-For the DB back-end I will be using [SlashDB](https://www.slashdb.com/).
-It can automatically generates a REST API from relational databases making it easy to access and modify our data.
+For the DB back-end I will be using [SlashDB](https://www.slashdb.com/). 
+It can automatically generates a REST API from relational databases making it easy to access and modify our data. 
 In general, it will save a lot of work coding my own data API-s.
 
 ## Go
-[Go](https://golang.org/) (Golang for search engines) is a language by Google, often used as a (micro)service building tools.
-It has most batteries included, allowing us to build a simple authentication layer between our data and the frontend.
-It's also a compiled language i.e. we can build statically linked binaries for easy distribution.
+[Go](https://golang.org/) (Golang for search engines) is a language by Google, often used as a (micro)service building tools. 
+It has most batteries included, allowing us to build a simple authentication layer between our data and the frontend. 
+It's also a compiled language i.e. we can build statically linked binaries for easy distribution and even embed our assets (CSS, js etc) 
+into that binary.
 
-# Vue
-After my experience with Angular 1.x (and a bit of React),
-I choose [Vue](https://vuejs.org/) - a small and simple front-end js framework.
-It's somewhere between those two frameworks (but a lot closer to React) and
-only focuses on the V(iew) part of MVC.
-On the Angular side, we have things like template directives (i.e. *ng-for="item in items"* -> *v-for="item in items"*)
-so no cumbersome JSX transpiling by default (a plus - at least for me).
-On Reacts side, one-way data flow i.e. always parent node -> child node (so harder to achieve the level of craziness like in Angular).
+## Vue
+After my experience with Angular 1.x (and a bit of React), 
+I choose [Vue](https://vuejs.org/) - a small and simple front-end js framework. 
+It's somewhere between those two frameworks (but a lot closer to React) and 
+only focuses on the V(iew) part of MVC. 
+On the Angular side, we have things like template directives (i.e. *ng-for="item in items"* -> *v-for="item in items"*) 
+so no cumbersome JSX transpiling by default (a plus - at least for me). 
+On Reacts side, one-way data flow i.e. always parent node -> child node (so harder to achieve the level of craziness like in Angular). 
 In general ease of use and comprehension of what the app is doing, also the awesome [dev tools](https://github.com/vuejs/vue-devtools) :)
 
 ### SlashDB Service
-For development purposes, SlashDB is [available for free](https://www.slashdb.com/download/)
-and I recommend using the [docker](https://docs.slashdb.com/user-guide/docker.html) image for an easy start.
+For development purposes, SlashDB is [available for free use](https://www.slashdb.com/download/) 
+and I recommend using the [docker](https://docs.slashdb.com/user-guide/docker.html) image for an easy way to get started.
 
 ```
 $ docker pull slashdb/slashdb
@@ -35,9 +47,10 @@ $ docker run -d -p 8000:80 -v $PWD/slashdb:/etc/slashdb -v $PWD/slashdb:/var/log
 
 Go to http://localhost:8000/ and follow the initial developer setup wizard.
 
-Now we need to create a database, in this example I'll be using MySQL, but any [DB engine supported by SlashDB](https://www.slashdb.com/pricing/) will do.
-Installing/configuring MySQL server is outside of scope of this article, so I'll just skip this part.
-For the timesheet app we'll need an database (preferably named *timesheet*), a user with read/write privileges to it and 3 tables.
+Now we need to create a database, in this example I'll be using MySQL, but any [DB engine supported by SlashDB](https://www.slashdb.com/pricing/) will do. 
+Installing/configuring MySQL server is outside of scope of this article, so I'll just skip this part. 
+For the timesheet app we'll need a database (preferably named *timesheet*), 
+a user with read/write privileges to said DB and 3 tables: *project*, *user* and *timesheet*.
 
 ```sql
 DROP TABLE IF EXISTS project;
@@ -74,5 +87,5 @@ CREATE TABLE `timesheet` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 ```
 
-This is MySQL-s SQL dialect, but it gives a general idea about the table layout
+This is MySQL-s SQL dialect, but it gives a general idea about the table layout 
 and is easy enough to adjust for other SQL dialects.
