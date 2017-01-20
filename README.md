@@ -25,13 +25,15 @@ For development purposes, SlashDB is [available for free](https://www.slashdb.co
 and I recommend using the [docker](https://docs.slashdb.com/user-guide/docker.html) image for an easy start.
 
 ```
+$ docker pull slashdb/slashdb
 $ mkdir timesheet-docker
 $ cd timesheet-docker
-$ docker pull slashdb/slashdb
 $ wget -c http://downloads.slashdb.com/v0.9/default-slashdb-configs_0.9.15.zip
 $ unzip default-slashdb-configs_0.9.15.zip
-$ docker run -d -p 8000:80 -v ./slashdb:/etc/slashdb -v ./slashdb:/var/log/slashdb slashdb:0.9.15
+$ docker run -d -p 8000:80 -v $PWD/slashdb:/etc/slashdb -v $PWD/slashdb:/var/log/slashdb slashdb/slashdb
 ```
+
+Go to http://localhost:8000/ and follow the initial developer setup wizard.
 
 Now we need to create a database, in this example I'll be using MySQL, but any [DB engine supported by SlashDB](https://www.slashdb.com/pricing/) will do.
 Installing/configuring MySQL server is outside of scope of this article, so I'll just skip this part.
