@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"crypto/sha512"
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -12,9 +13,16 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go/request"
 
 	"golang.org/x/crypto/pbkdf2"
 )
+
+var defaultClient = &http.Client{
+	Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	},
+}
 
 func logAndWrite(err error, logMsg string, w http.ResponseWriter) {
 	log.Println(logMsg+",", err)
@@ -67,9 +75,10 @@ func regHandler(w http.ResponseWriter, r *http.Request) {
 		un := r.FormValue("username")
 		unErrors := basicValidation("username", un, 3, 35)
 
-		uresp, err := http.Get("http://" + addr + "/db/" + pa.SdbDBName + "/user/username/" + un + ".json")
+		req, _ := http.NewRequest("GET", pa.SdbInstanceAddr+"/db/"+pa.SdbDBName+"/user/username/"+un+".json?"+pa.ParsedSdbAPIKey+"="+pa.ParsedSdbAPIValue, nil)
+		uresp, err := defaultClient.Do(req)
 		if err != nil {
-			logAndWrite(err, fmt.Sprintf("couldn't find user %q, or service %q unavailable", un, addr), w)
+			logAndWrite(err, fmt.Sprintf("couldn't find user %q, or service %q unavailable", un, pa.SdbInstanceAddr), w)
 			return
 		}
 		defer uresp.Body.Close()
@@ -144,18 +153,18 @@ func regHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-var defaultSecret = "timesheet app secret"
+var defaultSecret = []byte("timesheet app secret")
 
-func genJWTToken(username string, id int, secret string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+func genJWTToken(username string, id int, secret []byte) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.MapClaims{
 		"username": username,
 		"id":       id,
 		"exp":      time.Now().Add(time.Hour * 24).Unix(),
 	})
-	if secret == "" {
+	if len(secret) == 0 {
 		secret = defaultSecret
 	}
-	return token.SignedString(defaultSalt)
+	return token.SignedString(defaultSecret)
 }
 
 func authHandler(w http.ResponseWriter, r *http.Request) {
@@ -173,9 +182,10 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 
 		var body []byte
 		if len(unErrors) == 0 {
-			uresp, err := http.Get("http://" + addr + "/db/" + pa.SdbDBName + "/user/username/" + un + ".json")
-			if err != nil {
-				logAndWrite(err, fmt.Sprintf("couldn't find user %q, or service %q unavailable", un, addr), w)
+			req, _ := http.NewRequest("GET", pa.SdbInstanceAddr+"/db/"+pa.SdbDBName+"/user/username/"+un+".json?"+pa.ParsedSdbAPIKey+"="+pa.ParsedSdbAPIValue, nil)
+			uresp, err := defaultClient.Do(req)
+			if err != nil || uresp.StatusCode != 200 {
+				logAndWrite(err, fmt.Sprintf("couldn't find user %q, or service %q unavailable", un, pa.SdbInstanceAddr), w)
 				return
 			}
 			defer uresp.Body.Close()
@@ -226,7 +236,7 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		st, err := genJWTToken(un, int(data[0]["id"].(float64)), "")
+		st, err := genJWTToken(un, int(data[0]["id"].(float64)), nil)
 		if err != nil {
 			logAndWrite(err, "error generating JWT token", w)
 			return
@@ -249,8 +259,29 @@ func setupAuthHandlers() {
 	http.HandleFunc("/app/auth/", authHandler)
 }
 
-func authorizationMiddleware(fn func(http.ResponseWriter, *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+func authorizationMiddleware(fn func(http.ResponseWriter, *http.Request), secret []byte) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		token, err := request.ParseFromRequest(r, request.OAuth2Extractor, func(token *jwt.Token) (interface{}, error) {
+			mc := token.Claims.(jwt.MapClaims)
+			_, ok := mc["id"]
+			if !ok {
+				return nil, fmt.Errorf("token lacks 'id' claim")
+			}
+			_, ok = mc["username"]
+			if !ok {
+				return nil, fmt.Errorf("token lacks 'username' claim")
+			}
+
+			if len(secret) == 0 {
+				secret = defaultSecret
+			}
+			return secret, nil
+		})
+
+		if err != nil || !token.Valid {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
 		fn(w, r)
 	}
 }

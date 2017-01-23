@@ -16,11 +16,13 @@ import (
 
 // ParsedArgs - container for parsed CLI args.
 type ParsedArgs struct {
-	Interf          string
-	Port            uint
-	SdbInstanceAddr string
-	SdbDBName       string
-	SdbAPIKey       string
+	Interf            string
+	Port              uint
+	SdbInstanceAddr   string
+	SdbDBName         string
+	SdbAPIKey         string
+	ParsedSdbAPIKey   string
+	ParsedSdbAPIValue string
 }
 
 var (
@@ -38,6 +40,14 @@ func init() {
 		"sdb-apikey", "apikey:timesheet-api-key", "SlashDB user API key, key and value separated by single ':'",
 	)
 	flag.Parse()
+
+	// extract SlashDB API key
+	tmp := strings.Split(pa.SdbAPIKey, ":")
+	if len(tmp) != 2 {
+		log.Fatalln(fmt.Errorf("expected key, value pair, got: %s", pa.SdbAPIKey))
+	}
+	pa.ParsedSdbAPIKey, pa.ParsedSdbAPIValue = tmp[0], tmp[1]
+
 	addr = fmt.Sprintf("%s:%d", pa.Interf, pa.Port)
 }
 
@@ -73,17 +83,10 @@ func setupProxy() {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
-	// extract SlashDB API key
-	tmp := strings.Split(pa.SdbAPIKey, ":")
-	if len(tmp) != 2 {
-		log.Fatalln(fmt.Errorf("expected key, value pair, got: %s", pa.SdbAPIKey))
-	}
-
-	keyName, keyValue := tmp[0], tmp[1]
 	proxyHandler := func(w http.ResponseWriter, r *http.Request) {
 		// API key
 		q := r.URL.Query()
-		q.Set(keyName, keyValue)
+		q.Set(pa.ParsedSdbAPIKey, pa.ParsedSdbAPIValue)
 		r.URL.RawQuery = q.Encode()
 		// set CORS headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -95,7 +98,7 @@ func setupProxy() {
 		proxy.ServeHTTP(w, r)
 	}
 	// bind the proxy handler to "/"
-	http.HandleFunc("/", authorizationMiddleware(proxyHandler))
+	http.HandleFunc("/", authorizationMiddleware(proxyHandler, nil))
 }
 
 func main() {
