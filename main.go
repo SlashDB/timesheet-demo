@@ -41,11 +41,6 @@ func init() {
 	addr = fmt.Sprintf("%s:%d", pa.Interf, pa.Port)
 }
 
-func setupAuthHandlers() {
-	http.HandleFunc("/app/reg/", regHandler)
-	http.HandleFunc("/app/auth/", authHandler)
-}
-
 func setupBasicHandlers() {
 	afs := &assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: AssetInfo, Prefix: ""}
 	http.HandleFunc("/app/", func(w http.ResponseWriter, r *http.Request) {
@@ -65,16 +60,20 @@ func setupBasicHandlers() {
 }
 
 func setupProxy() {
+	// get address for the SlashDB instance and parse the URL
 	url, err := url.Parse(pa.SdbInstanceAddr)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
+	// create a reverse proxy
 	proxy := httputil.NewSingleHostReverseProxy(url)
+	// make it play nice with https endpoints
 	proxy.Transport = &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
+	// extract SlashDB API key
 	tmp := strings.Split(pa.SdbAPIKey, ":")
 	if len(tmp) != 2 {
 		log.Fatalln(fmt.Errorf("expected key, value pair, got: %s", pa.SdbAPIKey))
@@ -86,7 +85,7 @@ func setupProxy() {
 		q := r.URL.Query()
 		q.Set(keyName, keyValue)
 		r.URL.RawQuery = q.Encode()
-		// CORS
+		// set CORS headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		w.Header().Set(
@@ -95,7 +94,8 @@ func setupProxy() {
 		)
 		proxy.ServeHTTP(w, r)
 	}
-	http.HandleFunc("/", proxyHandler)
+	// bind the proxy handler to "/"
+	http.HandleFunc("/", authorizationMiddleware(proxyHandler))
 }
 
 func main() {

@@ -243,3 +243,14 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(td)
 	}
 }
+
+func setupAuthHandlers() {
+	http.HandleFunc("/app/reg/", regHandler)
+	http.HandleFunc("/app/auth/", authHandler)
+}
+
+func authorizationMiddleware(fn func(http.ResponseWriter, *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		fn(w, r)
+	}
+}
