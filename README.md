@@ -144,7 +144,7 @@ In my setup, this proxy-like app will have 4 endpoints.
 In the spirit of keeping it simple, as a method of of providing a kind of stateless session, we'll use [JWT](https://jwt.io/).
 The */app/auth/* endpoint will check user credentials and if everything's OK, provide a JWT token.
 
-First, things first lets install our everything we'll need:
+First, things first lets install everything we'll need:
 ```
 $ go get golang.org/x/crypto/pbkdf2
 $ go get github.com/dgrijalva/jwt-go/...
@@ -153,3 +153,41 @@ $ go get github.com/elazarl/go-bindata-assetfs/...
 ```
 
 > Tip: you can just run the build.sh script to install all requirements and compile the app.
+
+#### Setting up authorization/authentication proxy
+
+Using GoLangs builtin *httputil.ReverseProxy*, we create a lightweight reverse proxy:
+
+```go
+// for the full code, view auth.go source file
+func setupProxy() {
+	// get address for the SlashDB instance and parse the URL
+	url, err := url.Parse(pa.SdbInstanceAddr)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// create a reverse proxy
+	proxy := httputil.NewSingleHostReverseProxy(url)
+	// make it play nice with https endpoints
+	proxy.Transport = &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	...
+
+	// bind the proxy handler to "/"
+	http.HandleFunc("/", authorizationMiddleware(proxyHandler))
+}
+```
+
+So now, when requesting something from the default *localhost:8000* 
+request will get redirected to the root of the selected SlashDB instance 
+i.e. requesting 
+> http://localhost:8000/db/timesheet/project/project_id/1.json -> http://demo.slashdb.com/db/timesheet/project/project_id/1.json
+
+and the response will be transparently returned to the us.
+
+The *authorizationMiddleware* function applies all the authorization logic to the proxied requests i.e.
+it extracts the JWT token and checks if it's valid and depending on the user it allows 
+or prohibits resource access.
