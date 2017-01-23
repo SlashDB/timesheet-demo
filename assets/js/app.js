@@ -154,10 +154,12 @@
                             t.$emit('logged-in', t.createAuthInfo(resp.accessToken));
                         },
                         error: function (resp) {
-                            var k;
-                            for (var i = 0, l = ks.length; i < l; i++) {
-                                k = ks[i];
-                                t[k].errors = resp.responseJSON[k] || [];
+                            if (resp.responseJSON != null) {
+                                var k;
+                                for (var i = 0, l = ks.length; i < l; i++) {
+                                    k = ks[i];
+                                    t[k].errors = resp.responseJSON[k] || [];
+                                }
                             }
                         }
                     });
@@ -268,7 +270,7 @@
                             t.$emit('registered');
                         },
                         error: function (resp) {
-                            if (resp.status != 201) {
+                            if (resp.status != 201 && resp.responseJSON != null) {
                                 var k;
                                 for (var i = 0, l = ks.length; i < l; i++) {
                                     k = ks[i];
@@ -407,7 +409,7 @@
                     };
 
                     this.$http.post(getURL('/timesheet.json'), data)
-                        .then(function () { }, function (resp) {
+                        .then(function () {}, function (resp) {
                             // ignore errors - bitbucket issue #360
                             if (resp.status == 500) {
                                 var ld = extend({
@@ -516,7 +518,7 @@
                                 accomplishments: ''
                             };
 
-                            this.$http.post(getURL('/timesheet.json'), tdata).then(function () { }, function (resp) {
+                            this.$http.post(getURL('/timesheet.json'), tdata).then(function () {}, function (resp) {
                                 // ignore 500 errors - bitbucket issue #360
                                 if (resp.status == 500) {
                                     var ld = {
@@ -662,6 +664,7 @@
         el: '#app',
         methods: {
             storeAuthInfo: function (authInfo) {
+                Vue.http.headers.common['Authorization'] = 'Bearer ' + authInfo.accessToken;
                 this.authInfo = authInfo;
                 this.userId = authInfo.payload.id;
                 this.userName = authInfo.payload.username;
@@ -672,12 +675,14 @@
                 var authInfoStr = localStorage.getItem(key);
                 if (authInfoStr != null) {
                     this.authInfo = JSON.parse(authInfoStr);
+                    Vue.http.headers.common['Authorization'] = 'Bearer ' + this.authInfo.accessToken;
                     this.userId = this.authInfo.payload.id;
                     this.userName = this.authInfo.payload.username;
                     this.setView('projects');
                 }
             },
             deleteAuthInfo: function (key) {
+                delete this.$http.headers.common.Authorization;
                 key = key == null ? this.lsAuthInfoKey : key;
                 localStorage.removeItem(key);
             },
