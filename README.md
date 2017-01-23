@@ -137,8 +137,8 @@ In my setup, this proxy-like app will have 4 endpoints.
 ```
 /          - the SlashDB proxy
 /app/      - the frontend app itself
-/app/auth/ - user login/token provider
 /app/reg/  - user registration provider
+/app/auth/ - user login/token provider
 ```
 
 In the spirit of keeping it simple, as a method of of providing a kind of stateless session, we'll use [JWT](https://jwt.io/).
@@ -191,3 +191,119 @@ and the response will be transparently returned to the us.
 The *authorizationMiddleware* function applies all the authorization logic to the proxied requests i.e.
 it extracts the JWT token and checks if it's valid and depending on the user it allows 
 or prohibits resource access.
+
+```go
+func authorizationMiddleware(fn func(http.ResponseWriter, *http.Request), secret []byte) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token, err := request.ParseFromRequest(r, request.OAuth2Extractor, func(token *jwt.Token) (interface{}, error) {
+			// we simply check the token claims but this is a good place
+			// to parse the r.URL.Path or orther request paramethers
+			// to determin if a given user can access requested data
+			// check if user of ID = 8 can read /db/timesheet/project/project_id/2/
+			mc := token.Claims.(jwt.MapClaims)
+			_, ok := mc["id"]
+			if !ok {
+				return nil, fmt.Errorf("token lacks 'id' claim")
+			}
+			_, ok = mc["username"]
+			if !ok {
+				return nil, fmt.Errorf("token lacks 'username' claim")
+			}
+
+			if len(secret) == 0 {
+				secret = defaultSecret
+			}
+			return secret, nil
+		})
+
+		if err != nil || !token.Valid {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+		fn(w, r)
+	}
+}
+```
+
+In my example it's only a simple function, but of course we can implement 
+any kind of authentication logic there, depending on the use case.
+
+#### Implementing /app/reg/
+
+Before we can login we need a user, and for that we need to implement a way to register one.
+We need to generate a password hash and store it in the DB and SlashDB comes in handy here.
+
+```go
+...
+encodedPass := genPassword(un+passwd, nil)
+payload := map[string]string{
+  "username": un,
+  "passwd":   encodedPass,
+  "email":    email,
+}
+data, err := json.Marshal(payload)
+...
+
+req, _ = http.NewRequest("POST", pa.SdbInstanceAddr+"/db/"+pa.SdbDBName+"/user.json?"+pa.ParsedSdbAPIKey+"="+pa.ParsedSdbAPIValue, bytes.NewReader(data))
+ureq, err := defaultClient.Do(req)
+...
+
+if ureq.StatusCode != http.StatusCreated {
+  // something went wrong, provide some useful response to the user or just return what SlashDB has returned
+}
+w.WriteHeader(http.StatusCreated)
+w.Write([]byte(fmt.Sprintf("User %q was created successfully!", un)))
+```
+
+Here we simply make a *POST* request to SlashDB-s /db/timesheet/user.json providing necessary info - no SQL required.
+
+#### Implementing /app/auth/
+
+Before we can authenticate we ned to authorize and generate the *JWT* token.
+This is done at the */app/auth/* endpoint, the *authHandler* handler function, 
+user input (received via form data or URL params), and passes the necessary things to *genJWTToken*.
+
+```go
+var defaultSecret = []byte("timesheet app secret")
+
+func genJWTToken(username string, id int, secret []byte) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.MapClaims{
+		"username": username,
+		"id":       id,
+		"exp":      time.Now().Add(time.Hour * 24).Unix(),
+	})
+	if len(secret) == 0 {
+		secret = defaultSecret
+	}
+	return token.SignedString(defaultSecret)
+}
+```
+
+Then, if everything goes according to plan, in JSON form, we return the new token to the user.
+
+```go
+tc := struct {
+  Token string `json:"accessToken"`
+}{st}
+
+td, err := json.Marshal(tc)
+if err != nil {
+  log.Printf("data: %v, error: %v", tc, err)
+  http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+  return
+}
+w.Write(td)
+```
+
+On the frontend side, we set the *Authorization* header and store the 
+token in *localStorage* for future use i.e.
+
+```javascript
+storeAuthInfo: function (authInfo) {
+    Vue.http.headers.common['Authorization'] = 'Bearer ' + authInfo.accessToken;
+    this.authInfo = authInfo;
+    this.userId = authInfo.payload.id;
+    this.userName = authInfo.payload.username;
+    localStorage.setItem(this.lsAuthInfoKey, JSON.stringify(authInfo));
+}
+```
