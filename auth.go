@@ -263,9 +263,9 @@ func setupAuthHandlers() {
 func authorizationMiddleware(fn func(http.ResponseWriter, *http.Request), secret []byte) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token, err := request.ParseFromRequest(r, request.OAuth2Extractor, func(token *jwt.Token) (interface{}, error) {
-			// we simply check the token claims but this is a good place
-			// to parse the r.URL.Path or orther request paramethers
-			// to determin if a given user can access requested data
+			// we simply check the token claims, but this is a good place
+			// to parse the r.URL.Path or other request parameters
+			// to determine if a given user can access requested data
 			// check if user of ID = 8 can read /db/timesheet/project/project_id/2/
 			mc := token.Claims.(jwt.MapClaims)
 			_, ok := mc["id"]
