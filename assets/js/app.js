@@ -73,6 +73,12 @@
         return formValid;
     };
 
+    var unauthorizedHandler = function (resp) {
+        if (resp.status == 401) {
+            this.$emit('bad-token');
+        }
+    }
+
     Vue.component('InputErrors', {
         template: '<div><div v-for="e in errors" class="form-control-feedback">{{ e }}</div></div>',
         props: {
@@ -411,6 +417,7 @@
                     this.$http.post(getURL('/timesheet.json'), data)
                         .then(function () {}, function (resp) {
                             // ignore errors - bitbucket issue #360
+                            unauthorizedHandler(resp);
                             if (resp.status == 500) {
                                 var ld = extend({
                                     date: new Date().toDateTimeInputValue(19)
@@ -520,6 +527,7 @@
 
                             this.$http.post(getURL('/timesheet.json'), tdata).then(function () {}, function (resp) {
                                 // ignore 500 errors - bitbucket issue #360
+                                unauthorizedHandler(resp)
                                 if (resp.status == 500) {
                                     var ld = {
                                         data: extend({
@@ -594,7 +602,7 @@
                                 this.projects[pid].timesheets.push(timesheet);
                             }
                         }
-                    })
+                    }, unauthorizedHandler)
                     .then(function () {
                         this.pids = Object.keys(this.projects).reverse();
 
@@ -602,13 +610,13 @@
                             return function (resp) {
                                 extend(this.projects[pid].data, resp.data);
                             };
-                        }
+                        };
 
                         for (var i = 0, l = this.pids.length, pid; i < l; i++) {
                             pid = this.pids[i];
                             this.$http.get(getURL('/project/id/' + pid + '.json')).then(successH(pid));
                         }
-                    });
+                    }, unauthorizedHandler);
             }
         },
         data: function () {

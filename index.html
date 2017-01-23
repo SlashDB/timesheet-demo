@@ -36,7 +36,7 @@
                 <auth-card :view="view" @set-view="setView" @store-auth-info="storeAuthInfo" />
             </div>
             <div v-if="view === 'projects'">
-                <project-list :user-id="userId" />
+                <project-list :user-id="userId" @bad-token="logOut" />
             </div>
         </div>
     </div>
