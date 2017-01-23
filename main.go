@@ -31,7 +31,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&pa.Interf, "interface", "localhost", "interface to serve on")
+	flag.StringVar(&pa.Interf, "net-interface", "localhost", "network interface to serve on")
 	flag.UintVar(&pa.Port, "port", 8000, "local port to serve on")
 	flag.StringVar(&pa.SdbInstanceAddr, "sdb-address", "https://demo.slashdb.com", "SlashDB instance address")
 	flag.StringVar(&pa.SdbDBName, "sdb-dbname", "timesheet", "SlashDB DB name i.e. https://demo.slashdb.com/db/>>timesheet<<")
@@ -84,11 +84,11 @@ func setupProxy() {
 	}
 
 	proxyHandler := func(w http.ResponseWriter, r *http.Request) {
-		// API key
+		// set API key
 		q := r.URL.Query()
 		q.Set(pa.ParsedSdbAPIKey, pa.ParsedSdbAPIValue)
 		r.URL.RawQuery = q.Encode()
-		// set CORS headers
+		// set CORS headers for easy proxy to SDB communication
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		w.Header().Set(

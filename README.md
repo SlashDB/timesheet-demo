@@ -42,7 +42,6 @@ On Reacts side, one-way data flow i.e. always parent node -> child node (so hard
 In general ease of use and comprehension of what the app is doing, also the awesome [dev tools](https://github.com/vuejs/vue-devtools) :)
 
 ### SlashDB Service
-
 > **Important**: This part requires you to understand the basic of *SQL* and DB server setup 
 (if you choose to use something other thant SQLite).
 
@@ -123,7 +122,6 @@ we should see an empty table - but (hopefully) no errors.
 Thats it - no you have your data provided as an RESTful API, curtesy of SlashDB :)
 
 ### GoLang proxy authorization/authentication app
-
 > **Important**: This part requires you to understand some basics of programming in Go, 
 its setup (i.e. [$GOPATH/$GOROOT(https://github.com/golang/go/wiki/GOPATH)]) 
 and it's basic tooling (i.e. go get/build/install). Form more reference on that visit Go-s 
@@ -152,10 +150,9 @@ $ go get github.com/jteeuwen/go-bindata/...
 $ go get github.com/elazarl/go-bindata-assetfs/...
 ```
 
-> Tip: you can just run the build.sh script to install all requirements and compile the app.
+> Tip: you can just run the build.sh script to install all requirements and compile the app
 
 #### Setting up authorization/authentication proxy
-
 Using GoLangs builtin *httputil.ReverseProxy*, we create a lightweight reverse proxy:
 
 ```go
@@ -174,8 +171,13 @@ func setupProxy() {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
-	...
-
+	proxyHandler := func(w http.ResponseWriter, r *http.Request) {
+		// set API key for easy proxy to SDB communication
+		q := r.URL.Query()
+		q.Set(pa.ParsedSdbAPIKey, pa.ParsedSdbAPIValue)
+		r.URL.RawQuery = q.Encode()
+		...
+	}
 	// bind the proxy handler to "/"
 	http.HandleFunc("/", authorizationMiddleware(proxyHandler))
 }
@@ -189,17 +191,16 @@ i.e. requesting
 and the response will be transparently returned to the us.
 
 The *authorizationMiddleware* function applies all the authorization logic to the proxied requests i.e.
-it extracts the JWT token and checks if it's valid and depending on the user it allows 
-or prohibits resource access.
+it extracts the JWT token and checks if it's valid and depending on the user, allows or prohibits resource access.
 
 ```go
 func authorizationMiddleware(fn func(http.ResponseWriter, *http.Request), secret []byte) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token, err := request.ParseFromRequest(r, request.OAuth2Extractor, func(token *jwt.Token) (interface{}, error) {
-			// we simply check the token claims but this is a good place
-			// to parse the r.URL.Path or orther request paramethers
-			// to determin if a given user can access requested data
-			// check if user of ID = 8 can read /db/timesheet/project/project_id/2/
+			// we simply check the token claims, but this is a good place
+			// to parse the r.URL.Path or other request parameters
+			// to determine if a given user can access requested data
+			// check if user of ID = 8 can read /db/timesheet/project/project_id/2/ etc.
 			mc := token.Claims.(jwt.MapClaims)
 			_, ok := mc["id"]
 			if !ok {
@@ -228,10 +229,44 @@ func authorizationMiddleware(fn func(http.ResponseWriter, *http.Request), secret
 In my example it's only a simple function, but of course we can implement 
 any kind of authentication logic there, depending on the use case.
 
-#### Implementing /app/reg/
+#### /app/
+The frontend app is being served from a static template and 
+the rest is generated and managed by the Vue app.
 
-Before we can login we need a user, and for that we need to implement a way to register one.
-We need to generate a password hash and store it in the DB and SlashDB comes in handy here.
+```go
+afs := &assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: AssetInfo, Prefix: ""}
+http.HandleFunc("/app/", func(w http.ResponseWriter, r *http.Request) {
+	indexTmpl := template.New("index.html")
+	data, err := afs.Asset("index.html")
+	...
+	_, err = indexTmpl.Parse(string(data))
+	...
+	indexTmpl.Execute(w, pa)
+})
+...
+```
+
+#### /app/static/
+This little Go app also servers our static content
+
+```go
+afs := &assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: AssetInfo, Prefix: ""}
+...
+fs := http.FileServer(afs)
+http.Handle("/app/static/", http.StripPrefix("/app/static/", fs))
+```
+
+> Tip: during development, a lot of changes will happen in the assets, 
+> so it would be nice not to have to rebuild the binary every time we change anything,
+> so good that go-bindata has a debug mode, running:
+> ```go-bindata -debug ./assets/... index.html```
+> will generate a *bindata.go* file but mock assets with function calls that load 
+> files form the HD, when done call just *./build.sh*
+
+#### /app/reg/
+Before we can login we need a user, and for that we need to implement a way 
+to register one. We need to generate a password hash, 
+store user info in the DB - SlashDB comes in handy here.
 
 ```go
 ...
@@ -255,13 +290,15 @@ w.WriteHeader(http.StatusCreated)
 w.Write([]byte(fmt.Sprintf("User %q was created successfully!", un)))
 ```
 
-Here we simply make a *POST* request to SlashDB-s /db/timesheet/user.json providing necessary info - no SQL required.
+Here we simply make a *POST* request to SlashDB-s /db/timesheet/user.json 
+providing necessary info - no SQL required.
 
-#### Implementing /app/auth/
-
-Before we can authenticate we ned to authorize and generate the *JWT* token.
-This is done at the */app/auth/* endpoint, the *authHandler* handler function, 
-user input (received via form data or URL params), and passes the necessary things to *genJWTToken*.
+#### /app/auth/
+This little app 'session' relies on the *JWT* token, 
+so we need to authorize and generate that token and send it back to the user.
+This is done at the */app/auth/* endpoint, which is handled by the *authHandler* function. 
+The token itself is generated, based on the user input 
+(received via form data or URL params), in the *genJWTToken* function.
 
 ```go
 var defaultSecret = []byte("timesheet app secret")
@@ -279,7 +316,7 @@ func genJWTToken(username string, id int, secret []byte) (string, error) {
 }
 ```
 
-Then, if everything goes according to plan, in JSON form, we return the new token to the user.
+Then, if everything goes according to plan, we return the new token to the user.
 
 ```go
 tc := struct {
@@ -300,6 +337,7 @@ token in *localStorage* for future use i.e.
 
 ```javascript
 storeAuthInfo: function (authInfo) {
+	// set authorization token for all the request done by the Vue app
     Vue.http.headers.common['Authorization'] = 'Bearer ' + authInfo.accessToken;
     this.authInfo = authInfo;
     this.userId = authInfo.payload.id;
@@ -307,3 +345,54 @@ storeAuthInfo: function (authInfo) {
     localStorage.setItem(this.lsAuthInfoKey, JSON.stringify(authInfo));
 }
 ```
+
+Thanks to this we can make further requests, 
+without explicitly managing this token by hand.
+For instate when requesting user data.
+
+```javascript
+this.userId = 'id taken form JWT token';
+this.$http.get('http://localhost:8000/db/timesheet/user_id/' + this.userId + '.json'))
+	.then(function(resp) {
+		// do something on successful response
+	}, function(errResp) {
+		// do something else on an error
+	});
+```
+We just take care of handling responses/errors and dont bother with anything else.
+
+## CLI arguments
+In the *init()* function in *main.go* file, 
+using the GoLang building lib *flag*,
+I've added some command line arguments to this small proxy app.
+They allow for easy customization without recompiling the app 
+(i.e. after deploying the binary to somewhere or giving it to someone).
+Here's a fast overview of the available commands.
+
+```
+$ ./timesheet:
+  -net-interface string
+        network interface to serve on (default "localhost")
+  -port uint
+        local port to serve on (default 8000)
+  -sdb-address string
+        SlashDB instance address (default "https://demo.slashdb.com")
+  -sdb-apikey string
+        SlashDB user API key, key and value separated by single ':' (default "apikey:timesheet-api-key")
+  -sdb-dbname string
+        SlashDB DB name i.e. https://demo.slashdb.com/db/>>timesheet<< (default "timesheet")
+```
+
+## Building the app and bundling assets
+Just run
+```
+$ ./build.sh
+```
+and it will build linux/max/win binaries for you, and bundle all the assets inside.
+
+
+## Summary
+If you want to play around with the code it's available [here](https://bitbucket.org/slashdb/timesheet/src), 
+and the pre-build binaries are [here](https://bitbucket.org/slashdb/timesheet/downloads).
+
+The rest is [Code](https://bitbucket.org/slashdb/timesheet/src) (history).
