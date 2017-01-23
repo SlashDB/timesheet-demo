@@ -129,7 +129,8 @@ func regHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		ureq, err := http.Post("http://"+addr+"/db/"+pa.SdbDBName+"/user.json", "application/json", bytes.NewReader(data))
+		req, _ = http.NewRequest("POST", pa.SdbInstanceAddr+"/db/"+pa.SdbDBName+"/user.json?"+pa.ParsedSdbAPIKey+"="+pa.ParsedSdbAPIValue, bytes.NewReader(data))
+		ureq, err := defaultClient.Do(req)
 		if err != nil {
 			logAndWrite(err, fmt.Sprintf("couldn't create user %q, or service %q unavailable", un, addr), w)
 			return
