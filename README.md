@@ -17,18 +17,17 @@ available service and basing it on SlashDB.
 RESTful API <---> (small authentication/authorization proxy app <---> frontend GUI)
 ```
 What the developer needs to implement is, the frontend GUI 
-and also a way to implement authentication/authorization for the user.
-The RESTful part is provided to us for free by SlashDB.
+and a way to do authentication/authorization for the user.
+The RESTful API part is provided to us for free by [SlashDB](https://www.slashdb.com/).
 
 ## SlashDB
-For the DB back-end I will be using [SlashDB](https://www.slashdb.com/). 
-It can automatically generates a REST API from relational databases making it easy to access and modify our data. 
+SlashDB can automatically generates a REST API from relational databases making it easy to access and modify our data. 
 In general, it will save a lot of work coding my own data API-s.
 
 ## Go
-[Go](https://golang.org/) (Golang for search engines) is a language by Google, often used as a (micro)service building tools. 
-It has most batteries included, allowing us to build a simple authentication layer between our data and the frontend. 
-It's also a compiled language i.e. we can build statically linked binaries for easy distribution and even embed our assets (CSS, js etc) 
+[Go](https://golang.org/) (Golang for search engines) is a language by Google, often used as a (micro)service building tool. 
+It has (most) batteries included, allowing us to build a simple authentication layer between our data and the frontend. 
+It's also a compiled language i.e. we can build statically linked binaries for easy distribution and even embed our assets (CSS, JS etc) 
 into that binary.
 
 ## Vue
@@ -36,17 +35,17 @@ After my experience with Angular 1.x (and a bit of React),
 I choose [Vue](https://vuejs.org/) - a small and simple front-end js framework. 
 It's somewhere between those two frameworks (but a lot closer to React) and 
 only focuses on the V(iew) part of MVC. 
-On the Angular side, we have things like template directives (i.e. *ng-for="item in items"* -> *v-for="item in items"*) 
-so no cumbersome JSX transpiling by default (a plus - at least for me). 
-On Reacts side, one-way data flow i.e. always parent node -> child node (so harder to achieve the level of craziness like in Angular). 
-In general ease of use and comprehension of what the app is doing, also the awesome [dev tools](https://github.com/vuejs/vue-devtools) :)
+Similar to Angular, we have things like template directives (i.e. *ng-for="item in items"* -> *v-for="item in items"*) -  
+so no cumbersome JSX transpilation (a big plus - at least for me). 
+And similar to React, we get one-way data flow i.e. always parent -> child node communication (so harder to achieve the level of Angular app craziness). 
+In general it's easier to understand what our app is doing at a given time, also we get the awesome [dev tools](https://github.com/vuejs/vue-devtools) :)
 
 ### SlashDB Service
 > **Important**: This part requires you to understand the basic of *SQL* and DB server setup 
 (if you choose to use something other thant SQLite).
 
 For development purposes, SlashDB is [available for free use](https://www.slashdb.com/download/) 
-and I recommend using the [docker](https://docs.slashdb.com/user-guide/docker.html) image for an easy way to get started.
+and I recommend using the [docker](https://docs.slashdb.com/user-guide/docker.html) image for an fast way to get started.
 
 ```
 $ docker pull slashdb/slashdb
@@ -62,7 +61,7 @@ Go to [http://localhost:8000/](http://localhost:8000/) and follow the initial de
 Now we need to create a database, in this example I'll be using MySQL, but any [DB engine supported by SlashDB](https://www.slashdb.com/pricing/) will do. 
 Installing/configuring MySQL server is outside of scope of this article, so I'll just skip this part. 
 For the timesheet app we'll need a database (preferably named *timesheet*), 
-a user with read/write privileges to said DB and 3 tables: *project*, *user* and *timesheet*.
+a user with read/write privileges, to said DB and 3 tables: *project*, *user* and *timesheet*.
 
 ```sql
 DROP TABLE IF EXISTS project;
@@ -101,25 +100,31 @@ CREATE TABLE `timesheet` (
 
 This is MySQL-s SQL dialect, but it gives a general idea about the table layout 
 and is easy enough to adjust for other SQL dialects.
+This code is available as the file content of *timesheet.sql* in the [repository](https://bitbucket.org/slashdb/timesheet/src). 
+Running it on your MySQL server will also provide you with some basic data (app user: *slashdb* and password: *slashdb*).
+
+And if you prefer a diagram, heres one:
+
+![](readme_imgs/timesheetdb.png)
 
 After we have our DB, tables and user setup we need to make SlashDB aware of it.
 Going to [http://localhost:8000/](http://localhost:8000/) and logging-in as the *admin*,
-we can [config and add our database endpoint](https://docs.slashdb.com/user-guide/config-databases.html).
-For simplicity, I named the endpoint *timesheet*.
+we can [config and add our database endpoint](https://docs.slashdb.com/user-guide/config-databases.html), 
+for simplicity, I named the endpoint *timesheet*.
 In this case, I also enabled the *Auto Discover* feature and provided credentials for my MySQL user.
-Save, remembering to make sure the DB was connected without errors (green *Connected* status) and we're set.
+Save and remembering to make sure the DB has connected without errors (green *Connected* status) and we're set.
 
 It's a good idea to create a new user for remote access to our resources, 
 so following the [docs](https://docs.slashdb.com/user-guide/config-users.html),
 I'll add a user named - you guessed it - *timesheet*. 
-Also as our proxy authorization/authentication app will connect to SlashDB directly it's a good idea 
+Also as our proxy authorization/authentication app will connect to SlashDB directly it's a good 
 to set an API key for that user - in this example: *timesheet-api-key*.
 Finally, add our newly created data source to this users *Database Mappings* and *Save*. 
-Login as the *timesheet* user, and check if we have access to our tables.
-Going to the [project endpoint](http://localhost:8000/db/timesheet/project.html), 
-we should see an empty table - but (hopefully) no errors.
+We need to log-in as the *timesheet* user, and check if we have access to our tables. 
+The [project endpoint](http://localhost:8000/db/timesheet/project.html), 
+should now display an empty table - but (hopefully) no errors.
 
-Thats it - no you have your data provided as an RESTful API, curtesy of SlashDB :)
+Thats it - now you have your data provided as an RESTful API, curtesy of SlashDB :)
 
 ### GoLang proxy authorization/authentication app
 > **Important**: This part requires you to understand some basics of programming in Go, 
@@ -131,7 +136,7 @@ The basic idea is to proxy all the request from the frontend to the SlashDB REST
 and on the fly do some resource authorization. 
 Also we need to provide a way to create and authenticate *timesheet* app users.
 
-In my setup, this proxy-like app will have 4 endpoints.
+In my setup, this app will have 4 endpoints.
 ```
 /          - the SlashDB proxy
 /app/      - the frontend app itself
@@ -140,7 +145,7 @@ In my setup, this proxy-like app will have 4 endpoints.
 ```
 
 In the spirit of keeping it simple, as a method of of providing a kind of stateless session, we'll use [JWT](https://jwt.io/).
-The */app/login/* endpoint will check user credentials and if everything's OK, provide a JWT token.
+The */app/login/* endpoint will check user credentials and if everything's OK, provide a *JWT* token.
 
 First, things first lets install everything we'll need:
 ```
@@ -172,7 +177,7 @@ func setupProxy() {
 	}
 
 	proxyHandler := func(w http.ResponseWriter, r *http.Request) {
-		// set API key for easy proxy to SDB communication
+		// set API key for easy proxy-to-SDB communication
 		q := r.URL.Query()
 		q.Set(pa.ParsedSdbAPIKey, pa.ParsedSdbAPIValue)
 		r.URL.RawQuery = q.Encode()
@@ -184,14 +189,14 @@ func setupProxy() {
 ```
 
 So now, when requesting something from the default *localhost:8000* 
-request will get redirected to the root of the selected SlashDB instance 
+we'll get redirected to the root of the selected SlashDB instance 
 i.e. requesting 
 > http://localhost:8000/db/timesheet/project/project_id/1.json -> http://demo.slashdb.com/db/timesheet/project/project_id/1.json
 
 and the response will be transparently returned to the us.
 
 The *authorizationMiddleware* function applies all the authorization logic to the proxied requests i.e.
-it extracts the JWT token and checks if it's valid and depending on the user, allows or prohibits resource access.
+it extracts the *JWT* token and checks if it's valid and depending on the user permissions, allows or prohibits resource access.
 
 ```go
 func authorizationMiddleware(fn func(http.ResponseWriter, *http.Request), secret []byte) func(w http.ResponseWriter, r *http.Request) {
@@ -199,8 +204,8 @@ func authorizationMiddleware(fn func(http.ResponseWriter, *http.Request), secret
 		token, err := request.ParseFromRequest(r, request.OAuth2Extractor, func(token *jwt.Token) (interface{}, error) {
 			// we simply check the token claims, but this is a good place
 			// to parse the r.URL.Path or other request parameters
-			// to determine if a given user can access requested data
-			// check if user of ID = 8 can read /db/timesheet/project/project_id/2/ etc.
+			// and determine if a given user can access requested data
+			// i.e. check if user of ID = 8 can read /db/timesheet/project/project_id/2/ etc.
 			mc := token.Claims.(jwt.MapClaims)
 			_, ok := mc["id"]
 			if !ok {
@@ -211,9 +216,7 @@ func authorizationMiddleware(fn func(http.ResponseWriter, *http.Request), secret
 				return nil, fmt.Errorf("token lacks 'username' claim")
 			}
 
-			if len(secret) == 0 {
-				secret = defaultSecret
-			}
+			...
 			return secret, nil
 		})
 
@@ -221,13 +224,14 @@ func authorizationMiddleware(fn func(http.ResponseWriter, *http.Request), secret
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
+		// else call the original handler function
 		fn(w, r)
 	}
 }
 ```
 
-In my example it's only a simple function, but of course we can implement 
-any kind of authentication logic there, depending on the use case.
+In my example it's only a simple function, but of course, depending on the use case, we can implement 
+any kind of authentication logic there.
 
 #### /app/
 The frontend app is being served from a static template and 
@@ -243,7 +247,6 @@ http.HandleFunc("/app/", func(w http.ResponseWriter, r *http.Request) {
 	...
 	indexTmpl.Execute(w, pa)
 })
-...
 ```
 
 #### /app/static/
@@ -257,16 +260,16 @@ http.Handle("/app/static/", http.StripPrefix("/app/static/", fs))
 ```
 
 > Tip: during development, a lot of changes will happen in the assets, 
-> so it would be nice not to have to rebuild the binary every time we change anything,
-> so good that go-bindata has a debug mode, running:
+> so it would be nice not to have to rebuild the binary every time we change anything.
+> It's good that go-bindata has a debug mode, running:
 > ```go-bindata -debug ./assets/... index.html```
-> will generate a *bindata.go* file but mock assets with function calls that load 
-> files form the HD, when done call just *./build.sh*
+> will generate a *bindata.go* file, but mock assets with function calls that load 
+> files form the HDD, when done debugging, just run *./build.sh*
 
 #### /app/reg/
 Before we can login we need a user, and for that we need to implement a way 
 to register one. We need to generate a password hash, 
-store user info in the DB - SlashDB comes in handy here.
+store user info in the DB - once again, SlashDB comes in handy here.
 
 ```go
 ...
@@ -278,7 +281,10 @@ payload := map[string]string{
 }
 data, err := json.Marshal(payload)
 ...
-
+// by default:
+// pa.SdbInstanceAddr = "https://demo.slashdb.com"
+// pa.SdbDBName = "timesheet"
+// pa.ParsedSdbAPIKey+"="+pa.ParsedSdbAPIValue = "apikey=timesheet-api-key"
 req, _ = http.NewRequest("POST", pa.SdbInstanceAddr+"/db/"+pa.SdbDBName+"/user.json?"+pa.ParsedSdbAPIKey+"="+pa.ParsedSdbAPIValue, bytes.NewReader(data))
 ureq, err := defaultClient.Do(req)
 ...
@@ -291,13 +297,14 @@ w.Write([]byte(fmt.Sprintf("User %q was created successfully!", un)))
 ```
 
 Here we simply make a *POST* request to SlashDB-s /db/timesheet/user.json 
-providing necessary info - no SQL required.
+providing necessary info - no SQL required 
+and if everything goes OK, well get a 201 (Created) status code and the URL of the new resource i.e.
+"/db/timesheet/users/user_id/10".
 
 #### /app/login/
-This little app 'session' relies on the *JWT* token, 
-so we need to authorize and generate that token and send it back to the user.
-This is done at the */app/login/* endpoint, which is handled by the *loginHandler* function. 
-The token itself is generated, based on the user input 
+This little apps 'session' relies on the *JWT* token, 
+so we need to authorize the user, generate that token and send it back to the user.
+This is done via *loginHandler* function and the token itself is generated, based on the user input 
 (received via form data or URL params), in the *genJWTToken* function.
 
 ```go
@@ -346,28 +353,28 @@ storeAuthInfo: function (authInfo) {
 }
 ```
 
-Thanks to this we can make further requests, 
-without explicitly managing this token by hand.
+Thanks to this we can make further requests, without explicitly managing this token by hand.
 For instate when requesting user data.
 
 ```javascript
-this.userId = 'id taken form JWT token';
-this.$http.get('http://localhost:8000/db/timesheet/user_id/' + this.userId + '.json'))
+var userId = 'id taken form JWT token';
+this.$http.get('http://localhost:8000/db/timesheet/user_id/' + userId + '.json'))
 	.then(function(resp) {
 		// do something on successful response
 	}, function(errResp) {
 		// do something else on an error
 	});
 ```
-We just take care of handling responses/errors and dont bother with anything else.
+We just take care of handling responses/errors and don't bother with anything else.
+The same goes for POST, PUT and DELETE request- it's all supported by the SlashDB generated REST API.
 
-## CLI arguments
+## CLI arguments for the app
 In the *init()* function in *main.go* file, 
-using the GoLang building lib *flag*,
+using the GoLang building lib *flag* package,
 I've added some command line arguments to this small proxy app.
 They allow for easy customization without recompiling the app 
 (i.e. after deploying the binary to somewhere or giving it to someone).
-Here's a fast overview of the available commands.
+Here's a fast overview of the available commands and their default values.
 
 ```
 $ ./timesheet:
@@ -392,7 +399,5 @@ and it will build linux/max/win binaries for you, and bundle all the assets insi
 
 
 ## Summary
-If you want to play around with the code it's available [here](https://bitbucket.org/slashdb/timesheet/src), 
+If you want to play around with the code, it's available [here](https://bitbucket.org/slashdb/timesheet/src), 
 and the pre-build binaries are [here](https://bitbucket.org/slashdb/timesheet/downloads).
-
-The rest is [Code](https://bitbucket.org/slashdb/timesheet/src) (history).
