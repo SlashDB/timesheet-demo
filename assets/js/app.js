@@ -148,7 +148,7 @@
                     var ks = Object.keys(t._data);
 
                     $.ajax({
-                        url: '/app/auth/',
+                        url: '/app/login/',
                         data: {
                             username: t.username.value,
                             password: t.password.value

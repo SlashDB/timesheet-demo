@@ -93,10 +93,10 @@ func regHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		email := r.FormValue("email")
-		emailErrors := basicValidation("email", email, 5, 50)
+		emailErrors := basicValidation("email", email, 5, 45)
 
 		passwd := r.FormValue("password")
-		passwdErrors := basicValidation("password", passwd, 6, 150)
+		passwdErrors := basicValidation("password", passwd, 6, 45)
 
 		validationData := map[string][]string{}
 		if len(unErrors) > 0 {
@@ -168,7 +168,7 @@ func genJWTToken(username string, id int, secret []byte) (string, error) {
 	return token.SignedString(defaultSecret)
 }
 
-func authHandler(w http.ResponseWriter, r *http.Request) {
+func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		err := r.ParseForm()
 		w.Header().Set("Content-Type", "application/json")
@@ -203,7 +203,7 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		passwd := r.FormValue("password")
-		passErrors := basicValidation("password", passwd, 6, 150)
+		passErrors := basicValidation("password", passwd, 6, 45)
 
 		validationData := map[string][]string{}
 		if len(unErrors) > 0 {
@@ -257,7 +257,7 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 
 func setupAuthHandlers() {
 	http.HandleFunc("/app/reg/", regHandler)
-	http.HandleFunc("/app/auth/", authHandler)
+	http.HandleFunc("/app/login/", loginHandler)
 }
 
 func authorizationMiddleware(fn func(http.ResponseWriter, *http.Request), secret []byte) func(w http.ResponseWriter, r *http.Request) {

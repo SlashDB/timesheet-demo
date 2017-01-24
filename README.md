@@ -136,11 +136,11 @@ In my setup, this proxy-like app will have 4 endpoints.
 /          - the SlashDB proxy
 /app/      - the frontend app itself
 /app/reg/  - user registration provider
-/app/auth/ - user login/token provider
+/app/login/ - user login/token provider
 ```
 
 In the spirit of keeping it simple, as a method of of providing a kind of stateless session, we'll use [JWT](https://jwt.io/).
-The */app/auth/* endpoint will check user credentials and if everything's OK, provide a JWT token.
+The */app/login/* endpoint will check user credentials and if everything's OK, provide a JWT token.
 
 First, things first lets install everything we'll need:
 ```
@@ -293,10 +293,10 @@ w.Write([]byte(fmt.Sprintf("User %q was created successfully!", un)))
 Here we simply make a *POST* request to SlashDB-s /db/timesheet/user.json 
 providing necessary info - no SQL required.
 
-#### /app/auth/
+#### /app/login/
 This little app 'session' relies on the *JWT* token, 
 so we need to authorize and generate that token and send it back to the user.
-This is done at the */app/auth/* endpoint, which is handled by the *authHandler* function. 
+This is done at the */app/login/* endpoint, which is handled by the *loginHandler* function. 
 The token itself is generated, based on the user input 
 (received via form data or URL params), in the *genJWTToken* function.
 
