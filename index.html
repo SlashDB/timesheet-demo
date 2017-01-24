@@ -22,14 +22,14 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <a class="navbar-brand" href="#">timesheet app</a>
-
             <div class="collapse navbar-collapse" id="navbarText">
-                <span class="navbar-text"><user :name="userName"/></span>
-                <ul class="navbar-nav mr-auto" v-show="view === 'projects'">
-                    <li class="nav-item active">
-                        <a class="nav-link" href="#" @click.prevent="logOut">Logout</a>
-                    </li>
-                </ul>
+                <ul class="navbar-nav mr-auto"></ul>
+                <span class="navbar-text" v-show="view === 'projects'">
+                    <user :name="userName"/>
+                </span>
+                <form class="form-inline ml-2" v-show="view === 'projects'">
+                    <button class="btn btn-sm btn-outline-primary" type="button" @click.prevent="logOut">Logout</button>
+                </form>
             </div>
         </nav>
 

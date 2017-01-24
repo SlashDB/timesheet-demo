@@ -295,27 +295,33 @@
 
     Vue.component('AuthCard', {
         template: `
-        <div class="card text-center mt-3">
-            <div class="card-header">
-                <ul class="nav nav-tabs justify-content-center card-header-tabs">
-                    <li class="nav-item" @click="$emit('set-view', 'login')">
-                        <a class="nav-link" :class="{active: view == 'login'}">Login</a>
-                    </li>
-                    <li class="nav-item" @click="$emit('set-view', 'register')">
-                        <a class="nav-link" :class="{active: view == 'register'}" >Register</a>
-                    </li>
-                </ul>
+        <div class="row align-items-center">
+            <div class="col-4 col-md-3 col-sm-2"></div>
+            <div class="col">
+                <div class="card text-center mt-3">
+                    <div class="card-header">
+                        <ul class="nav nav-tabs justify-content-center card-header-tabs">
+                            <li class="nav-item" @click="$emit('set-view', 'login')">
+                                <a class="nav-link" :class="{active: view == 'login'}">Login</a>
+                            </li>
+                            <li class="nav-item" @click="$emit('set-view', 'register')">
+                                <a class="nav-link" :class="{active: view == 'register'}" >Register</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div v-show="view === 'login'" class="card-block">
+                        <p class="card-text">
+                            <login-form @logged-in="onLoggedIn"/>
+                        </p>
+                    </div>
+                    <div v-show="view === 'register'" class="card-block">
+                        <p class="card-text">
+                            <register-form @registered="$emit('set-view', 'login')"/>
+                        </p>
+                    </div>
+                </div>
             </div>
-            <div v-show="view === 'login'" class="card-block">
-                <p class="card-text">
-                    <login-form @logged-in="onLoggedIn"/>
-                </p>
-            </div>
-            <div v-show="view === 'register'" class="card-block">
-                <p class="card-text">
-                    <register-form @registered="$emit('set-view', 'login')"/>
-                </p>
-            </div>
+            <div class="col-4 col-md-3 col-sm-2"></div>
         </div>
         `,
         methods: {
@@ -555,33 +561,39 @@
 
     Vue.component('ProjectList', {
         template: `
-        <div class="mt-3">
-            <new-project :userId="userId" @project-created="addProject"/>
-            <div v-if="pids.length > 0">
-                <div class="card mt-3" v-for="pid in pids">
-                    <div class="card-header">
-                        <span><strong>{{ projects[pid].data.name }}</strong></span>
-                        <span class="float-sm-right float-md-right float-lg-right">
-                            total duration: <strong>{{ sumDuration(projects[pid]) }}</strong> hours
-                        </span>
-                    </div>
-                    <div class="card-block">
-                        <new-timesheet :userId="userId" :projectId="Number(pid)" @timesheet-created="addTimesheet"/>
-                        <div class="card mt-2" v-for="timesheet in projects[pid].timesheets">
-                            <div class="card-header">created: <strong>{{ timesheet.date | formatDateTime }}</strong></div>
-                            <div class="card-block">
-                                <h6 class="card-subtitle mb-2 text-muted">duration: <strong>{{ timesheet.duration }}</strong> hours</h6>
-                                <p class="card-text" style="word-wrap:break-word;">accomplished: <strong>{{ timesheet.accomplishments }}</strong></p>
+        <div class="row align-items-center">
+            <div class="col-3 col-md-2 col-sm-1"></div>
+            <div class="col">
+                <div class="mt-3">
+                    <new-project :userId="userId" @project-created="addProject"/>
+                    <div v-if="pids.length > 0">
+                        <div class="card mt-3" v-for="pid in pids">
+                            <div class="card-header">
+                                <span><strong>{{ projects[pid].data.name }}</strong></span>
+                                <span class="float-sm-right float-md-right float-lg-right">
+                                    total duration: <strong>{{ sumDuration(projects[pid]) }}</strong> hours
+                                </span>
                             </div>
+                            <div class="card-block">
+                                <new-timesheet :userId="userId" :projectId="Number(pid)" @timesheet-created="addTimesheet"/>
+                                <div class="card mt-2" v-for="timesheet in projects[pid].timesheets">
+                                    <div class="card-header">created: <strong>{{ timesheet.date | formatDateTime }}</strong></div>
+                                    <div class="card-block">
+                                        <h6 class="card-subtitle mb-2 text-muted">duration: <strong>{{ timesheet.duration }}</strong> hours</h6>
+                                        <p class="card-text" style="word-wrap:break-word;">accomplished: <strong>{{ timesheet.accomplishments }}</strong></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else class="card text-center mt-3">
+                        <div class="card-block">
+                            <h4 class="card-title">You have no project yet.</h4>
                         </div>
                     </div>
                 </div>
             </div>
-            <div v-else class="card text-center mt-3">
-                <div class="card-block">
-                    <h4 class="card-title">You have no project yet.</h4>
-                </div>
-            </div>
+            <div class="col-3 col-md-2 col-sm-1"></div>
         </div>
         `,
         mounted: function () {
@@ -659,7 +671,7 @@
     });
 
     Vue.component('User', {
-        template: 'you are: <strong>{{ name }}</strong>',
+        template: '<span>you are: <strong>{{ name }}</strong></span>',
         props: {
             name: {
                 type: String,
@@ -691,6 +703,9 @@
             },
             deleteAuthInfo: function (key) {
                 delete this.$http.headers.common.Authorization;
+                this.authInfo = {};
+                this.userId = '';
+                this.userName = '';
                 key = key == null ? this.lsAuthInfoKey : key;
                 localStorage.removeItem(key);
             },
