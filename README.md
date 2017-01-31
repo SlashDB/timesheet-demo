@@ -399,11 +399,11 @@ $ ./timesheet:
 ```
 
 ## Building the app and bundling assets
-Just run
+Just run:
 ```
 $ ./build.sh
 ```
-and it will build linux/max/win binaries for you, and bundle all the assets inside.
+and you'll end up with linux/max/win binaries - with all the assets bundled inside.
 
 
 ## Summary
