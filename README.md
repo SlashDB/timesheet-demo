@@ -1,5 +1,9 @@
 # Building a simple timesheet app with SlashDB, Go and Vue
 
+We will be building a simple poof of concept, time tracking app and basing it on a [SlashDB](https://www.slashdb.com/) powered API. 
+The app itself will allow users to register, login/logout, add new *projects*, add *tasks* to those projects and 
+it will automatically sum-up the time a given project has taken.
+
 ## Requirements
 * [SlashDB](https://www.slashdb.com/) >= 0.9.15
 * [Go](https://golang.org/dl/) >= 1.7.4
@@ -8,14 +12,9 @@
 ## The Code
 All the code refereed in this article is available at the [bitbucket GIT repository](https://bitbucket.org/slashdb/timesheet/src).
 
-## The basic concept
-Is to build a simple poof of concept time tracking app, either for local use or as a network 
-available service and basing it on SlashDB.
+## The timesheet app layout
+![](readme_imgs/art_fi_02.png)
 
-### The timesheet app layout:
-```
-RESTful API <---> (small authentication/authorization proxy app <---> frontend GUI)
-```
 What the developer needs to implement is, the frontend GUI 
 and a way to do authentication/authorization for the user.
 The RESTful API part is provided to us for free by [SlashDB](https://www.slashdb.com/).
@@ -133,7 +132,7 @@ and it's basic tooling (i.e. go get/build/install). Form more reference on that 
 [wiki page](https://github.com/golang/).
 
 The basic idea is to proxy all the request from the frontend to the SlashDB RESTful API 
-and on the fly do some resource authorization. 
+and on the fly, do some resource authorization. 
 Also we need to provide a way to create and authenticate *timesheet* app users.
 
 In my setup, this app will have 4 endpoints.
@@ -268,8 +267,8 @@ http.Handle("/app/static/", http.StripPrefix("/app/static/", fs))
 
 #### /app/reg/
 Before we can login we need a user, and for that we need to implement a way 
-to register one. We need to generate a password hash, 
-store user info in the DB - once again, SlashDB comes in handy here.
+to register one. We also need to generate a password hash, 
+store user info in the DB - so once again, SlashDB comes in handy here.
 
 ```go
 ...
@@ -284,7 +283,8 @@ data, err := json.Marshal(payload)
 // by default:
 // pa.SdbInstanceAddr = "https://demo.slashdb.com"
 // pa.SdbDBName = "timesheet"
-// pa.ParsedSdbAPIKey+"="+pa.ParsedSdbAPIValue = "apikey=timesheet-api-key"
+// pa.ParsedSdbAPIKey = "apikey"
+// pa.ParsedSdbAPIValue = "timesheet-api-key"
 req, _ = http.NewRequest("POST", pa.SdbInstanceAddr+"/db/"+pa.SdbDBName+"/user.json?"+pa.ParsedSdbAPIKey+"="+pa.ParsedSdbAPIValue, bytes.NewReader(data))
 ureq, err := defaultClient.Do(req)
 ...
@@ -360,13 +360,21 @@ For instate when requesting user data.
 var userId = 'id taken form JWT token';
 this.$http.get('http://localhost:8000/db/timesheet/user_id/' + userId + '.json'))
 	.then(function(resp) {
-		// do something on successful response
+		// do something on a successful response
 	}, function(errResp) {
 		// do something else on an error
 	});
 ```
 We just take care of handling responses/errors and don't bother with anything else.
-The same goes for POST, PUT and DELETE request- it's all supported by the SlashDB generated REST API.
+The same goes for POST, PUT and DELETE requests - it's all supported by the SlashDB generated REST API.
+
+## A few screenshots
+
+### The registration view
+![](readme_imgs/timesshet_app_sc_01.png)
+
+### The main view
+![](readme_imgs/timesshet_app_sc_02.png)
 
 ## CLI arguments for the app
 In the *init()* function in *main.go* file, 
