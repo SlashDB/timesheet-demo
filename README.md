@@ -6,24 +6,19 @@ it will automatically sum-up the time a given project has taken. Here's a little
 
 ![](readme_imgs/timesshet_app_sc_03.png)
 
-## The stack
-![](readme_imgs/art_fi_02.png)
+## A short descriptions of the most important parts
 
-What the developer needs to implement is, the frontend GUI
-and a way to do authentication/authorization for the user.
-The RESTful API part is provided to us for free by [SlashDB](https://www.slashdb.com/).
-
-## SlashDB
+### SlashDB
 SlashDB can automatically generates a REST API from relational databases making it easy to access and modify our data.
 In general, it will save a lot of work coding my own data API-s.
 
-## Go
+### Go
 [Go](https://golang.org/) (Golang for search engines) is a language by Google, often used as a (micro)service building tool.
 It has (most) batteries included, allowing us to build a simple authentication layer between our data and the frontend.
 It's also a compiled language i.e. we can build statically linked binaries for easy distribution and even embed our assets (CSS, JS etc)
 into that binary.
 
-## Vue
+### Vue
 After my experience with Angular 1.x (and a bit of React),
 I choose [Vue](https://vuejs.org/) - a small and simple front-end js framework.
 It's somewhere between those two frameworks (but a lot closer to React) and
@@ -33,7 +28,14 @@ so no cumbersome JSX transpilation (a big plus - at least for me).
 And similar to React, we get one-way data flow i.e. always parent -> child node communication (so harder to achieve the level of Angular app craziness).
 In general it's easier to understand what our app is doing at a given time, also we get the awesome [dev tools](https://github.com/vuejs/vue-devtools) :)
 
-### SlashDB Service
+## The stack
+![](readme_imgs/art_fi_02.png)
+
+What the developer needs to implement is, the frontend GUI
+and a way to do authentication/authorization for the user.
+The RESTful API part is provided to us for free by [SlashDB](https://www.slashdb.com/).
+
+## MySQL Server and SlashDB
 > **Important**: This part requires you to understand the basic of *SQL* and DB server setup
 (if you choose to use something other thant SQLite).
 
