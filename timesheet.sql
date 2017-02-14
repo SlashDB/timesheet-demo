@@ -36,7 +36,9 @@ CREATE TABLE `timesheet` (
   `date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `duration` double NOT NULL,
   `accomplishments` varchar(150) DEFAULT NULL,
-  PRIMARY KEY (`user_id`,`project_id`,`date`)
+  PRIMARY KEY (`user_id`,`project_id`,`date`),
+  FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
+  FOREIGN KEY (`project_id`) REFERENCES `project` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 INSERT INTO timesheet (user_id, project_id, duration, accomplishments)
