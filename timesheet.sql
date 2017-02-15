@@ -1,14 +1,4 @@
 DROP TABLE IF EXISTS timesheet;
-CREATE TABLE `timesheet` (
-  `user_id` int(11) NOT NULL,
-  `project_id` int(11) NOT NULL,
-  `date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `duration` double NOT NULL,
-  `accomplishments` varchar(150) DEFAULT NULL,
-  PRIMARY KEY (`user_id`,`project_id`,`date`),
-  FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
-  FOREIGN KEY (`project_id`) REFERENCES `project` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS project;
 CREATE TABLE `project` (
@@ -40,6 +30,17 @@ CREATE TABLE `user` (
 # user: slashdb, password: slashdb
 INSERT INTO user (id, username, description, email,passwd)
 VALUES (1, 'slashdb', 'slashdb@vtenterprise.com', '3514555726a77ab19eb675b499141dc6c407680a56c42b6d3411fc598b3ff97c');
+
+CREATE TABLE `timesheet` (
+  `user_id` int(11) NOT NULL,
+  `project_id` int(11) NOT NULL,
+  `date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `duration` double NOT NULL,
+  `accomplishments` varchar(150) DEFAULT NULL,
+  PRIMARY KEY (`user_id`,`project_id`,`date`),
+  FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
+  FOREIGN KEY (`project_id`) REFERENCES `project` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 INSERT INTO timesheet (user_id, project_id, duration, accomplishments)
 VALUES
