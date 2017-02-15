@@ -59,6 +59,18 @@ For the timesheet app we'll need a database (preferably named *timesheet*),
 a user with read/write privileges, to said DB and 3 tables: *project*, *user* and *timesheet*.
 
 ```sql
+DROP TABLE IF EXISTS timesheet;
+CREATE TABLE `timesheet` (
+  `user_id` int(11) NOT NULL,
+  `project_id` int(11) NOT NULL,
+  `date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `duration` double NOT NULL,
+  `accomplishments` varchar(150) DEFAULT NULL,
+  PRIMARY KEY (`user_id`,`project_id`,`date`),
+  FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
+  FOREIGN KEY (`project_id`) REFERENCES `project` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 DROP TABLE IF EXISTS project;
 CREATE TABLE `project` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -81,18 +93,6 @@ CREATE TABLE `user` (
   UNIQUE KEY `user_username_uindex` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-
-DROP TABLE IF EXISTS timesheet;
-CREATE TABLE `timesheet` (
-  `user_id` int(11) NOT NULL,
-  `project_id` int(11) NOT NULL,
-  `date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `duration` double NOT NULL,
-  `accomplishments` varchar(150) DEFAULT NULL,
-  PRIMARY KEY (`user_id`,`project_id`,`date`),
-  FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
-  FOREIGN KEY (`project_id`) REFERENCES `project` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 ```
 
 This is MySQL-s SQL dialect, but it gives a general idea about the table layout
