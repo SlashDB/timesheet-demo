@@ -81,7 +81,6 @@ CREATE TABLE `project` (
   UNIQUE KEY `project_id_uindex` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-
 DROP TABLE IF EXISTS user;
 CREATE TABLE `user` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -92,7 +91,6 @@ CREATE TABLE `user` (
   UNIQUE KEY `user_id_uindex` (`id`),
   UNIQUE KEY `user_username_uindex` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
 ```
 
 This is MySQL-s SQL dialect, but it gives a general idea about the table layout
