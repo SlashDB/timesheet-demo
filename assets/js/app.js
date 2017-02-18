@@ -141,30 +141,30 @@
                     };
                 return authInfo;
             },
-            login: function ($event) {
-                var t = this;
+            login: function () {
+                var self = this;
 
-                if (isFormValid(t._data)) {
-                    var ks = Object.keys(t._data);
+                if (isFormValid(self._data)) {
+                    var ks = Object.keys(self._data);
 
                     $.ajax({
                         url: '/app/login/',
                         data: {
-                            username: t.username.value,
-                            password: t.password.value
+                            username: self.username.value,
+                            password: self.password.value
                         },
                         dataType: 'json',
                         type: 'POST',
                         success: function (resp) {
-                            resetFields(t, ks);
-                            t.$emit('logged-in', t.createAuthInfo(resp.accessToken));
+                            resetFields(self, ks);
+                            self.$emit('logged-in', self.createAuthInfo(resp.accessToken));
                         },
                         error: function (resp) {
                             if (resp.responseJSON != null) {
                                 var k;
                                 for (var i = 0, l = ks.length; i < l; i++) {
                                     k = ks[i];
-                                    t[k].errors = resp.responseJSON[k] || [];
+                                    self[k].errors = resp.responseJSON[k] || [];
                                 }
                             }
                         }
@@ -256,10 +256,10 @@
                 this.password2.errors.pop();
             },
             register: function () {
-                var t = this;
+                var self = this;
 
-                if (isFormValid(t._data)) {
-                    var ks = Object.keys(t._data),
+                if (isFormValid(self._data)) {
+                    var ks = Object.keys(self._data),
                         data = {
                             username: this.username.value,
                             email: this.email.value,
@@ -272,19 +272,19 @@
                         dataType: 'json',
                         type: 'POST',
                         success: function (resp) {
-                            resetFields(t, ks);
-                            t.$emit('registered');
+                            resetFields(self, ks);
+                            self.$emit('registered');
                         },
                         error: function (resp) {
                             if (resp.status != 201 && resp.responseJSON != null) {
                                 var k;
                                 for (var i = 0, l = ks.length; i < l; i++) {
                                     k = ks[i];
-                                    t[k].errors = resp.responseJSON[k] || [];
+                                    self[k].errors = resp.responseJSON[k] || [];
                                 }
                             } else {
-                                resetFields(t, ks);
-                                t.$emit('registered');
+                                resetFields(self, ks);
+                                self.$emit('registered');
                             }
                         }
                     });
@@ -420,7 +420,7 @@
                         user_id: this.userId
                     };
 
-                    this.$http.post(getURL('/timesheet.json'), data)
+                    this.$http.post(getURL('/timesheet/user_id/' + this.userId + '.json'), data)
                         .then(function () { }, function (resp) {
                             // ignore errors - bitbucket issue #360
                             unauthorizedHandler(resp);
@@ -522,7 +522,7 @@
                         description: this.description.value
                     };
 
-                    this.$http.post(getURL('/project.json'), data)
+                    this.$http.post(getURL('/timesheet/user_id/' + this.userId + '/project.json'), data)
                         .then(function (resp) {
                             var tdata = {
                                 project_id: resp.data.split('/').pop(),
@@ -531,20 +531,21 @@
                                 accomplishments: ''
                             };
 
-                            this.$http.post(getURL('/timesheet.json'), tdata).then(function () { }, function (resp) {
-                                // ignore 500 errors - bitbucket issue #360
-                                unauthorizedHandler(resp)
-                                if (resp.status == 500) {
-                                    var ld = extend({
-                                        id: Number(tdata.project_id),
-                                        timesheet: []
-                                    }, data);
-                                    this.$emit('project-created', ld);
-                                    resetFields(this, Object.keys(data));
-                                } else {
-                                    console.log(resp);
-                                }
-                            });
+                            this.$http.post(getURL('/timesheet/user_id/' + this.userId + '.json'), tdata)
+                                .then(function () { }, function (resp) {
+                                    // ignore 500 errors - bitbucket issue #360
+                                    unauthorizedHandler(resp)
+                                    if (resp.status == 500) {
+                                        var ld = extend({
+                                            id: Number(tdata.project_id),
+                                            timesheet: []
+                                        }, data);
+                                        this.$emit('project-created', ld);
+                                        resetFields(this, Object.keys(data));
+                                    } else {
+                                        console.log(resp);
+                                    }
+                                });
                         });
                 }
             }
@@ -557,6 +558,34 @@
         }
     });
 
+    Vue.component('RemoveBtn', {
+        template: `
+        <button type="button" class="btn btn-sm" :class="btnClass" @click="confirmation = true">
+            <span v-show="!confirmation">&times;</span>
+            <span v-show="confirmation">
+                <span class="btn-link" @click.stop.self="onConfirm(); confirmation = false">yes</span>
+                <span class="btn-link" @click.stop.self="confirmation = false">no</span>
+            </span>
+        </button>
+        `,
+        computed: {
+            btnClass: function () {
+                return this.confirmation ? 'btn-secondary' : 'btn-outline-danger';
+            }
+        },
+        data: function () {
+            return {
+                confirmation: false
+            };
+        },
+        props: {
+            onConfirm: {
+                type: Function,
+                required: true
+            }
+        }
+    });
+
     Vue.component('ProjectList', {
         template: `
         <div class="row align-items-center">
@@ -564,18 +593,22 @@
             <div class="col">
                 <div class="mt-3">
                     <new-project :userId="userId" @project-created="addProject"/>
-                    <div v-if="projects.length > 0">
-                        <div class="card mt-3" v-for="project in projects">
+                    <div v-if="projects.length > 0 && !loading">
+                        <div class="card mt-3" v-for="(project, pIdx) in projects">
                             <div class="card-header">
                                 <span><strong>{{ project.name }}</strong></span>
                                 <span class="float-sm-right float-md-right float-lg-right">
                                     total duration: <strong>{{ sumDuration(project) }}</strong> hours
+                                    <remove-btn class="ml-2" :on-confirm="removeProject(pIdx)"/>
                                 </span>
                             </div>
                             <div class="card-block">
                                 <new-timesheet :userId="userId" :project="project" @timesheet-created="addTimesheet"/>
-                                <div class="card mt-2" v-for="timesheet in project.timesheet" v-if="timesheet.duration > 0 && timesheet.accomplishments.length > 0">
-                                    <div class="card-header">created: <strong>{{ timesheet.date | formatDateTime }}</strong></div>
+                                <div class="card mt-2" v-for="(timesheet, tIdx) in project.timesheet" v-if="timesheet.duration > 0 && timesheet.accomplishments.length > 0">
+                                    <div class="card-header">
+                                        created: <strong>{{ timesheet.date | formatDateTime }}</strong>
+                                        <remove-btn class="float-sm-right float-md-right float-lg-right" :on-confirm="removeTimesheet(project, timesheet, tIdx)"/>
+                                    </div>
                                     <div class="card-block">
                                         <h6 class="card-subtitle mb-2 text-muted">duration: <strong>{{ timesheet.duration }}</strong> hours</h6>
                                         <p class="card-text" style="word-wrap:break-word;">accomplished: <strong>{{ timesheet.accomplishments }}</strong></p>
@@ -586,7 +619,8 @@
                     </div>
                     <div v-else class="card text-center mt-3">
                         <div class="card-block">
-                            <h4 class="card-title">You have no project yet.</h4>
+                            <h4 v-if="loading" class="card-title">Loading...</h4>
+                            <h4 v-else class="card-title">You have no project yet - add one above :)</h4>
                         </div>
                     </div>
                 </div>
@@ -605,20 +639,53 @@
                             project.timesheet = project.timesheet.reverse();
                         }
                         this.projects = projects;
+                        this.loading = false;
                     }, unauthorizedHandler);
             }
         },
         data: function () {
             return {
-                projects: []
+                projects: [],
+                loading: true,
             };
         },
         methods: {
             addProject: function (project) {
                 this.projects.splice(0, 0, project);
             },
+            removeProject: function (pIdx) {
+                var self = this;
+                return function () {
+                    var project = self.projects.splice(pIdx, 1)[0];
+                    if (project != null) {
+                        // first remove all the children timesheet entires
+                        self.$http.delete(getURL('/timesheet/user_id/' + self.userId + '/project_id/' + project.id))
+                            .then(function (resp) {
+                                // then remove the project itself
+                                self.$http.delete(getURL('/timesheet/user_id/' + self.userId + '/project/id/' + project.id))
+                                    .then(function (resp) { }, unauthorizedHandler);
+                            }, unauthorizedHandler);
+                    }
+                };
+            },
+            updateProjectData: function (project) {
+                this.$http.get(getURL('/timesheet/user_id/' + this.userId + '/project/id/' + project.id + '?depth=1'))
+                    .then(function (resp) {
+                        project.timesheet = resp.data.timesheet.reverse();
+                    }, unauthorizedHandler);
+            },
             addTimesheet: function (project, timesheet) {
                 project.timesheet.splice(0, 0, timesheet);
+                // reload and sync-up project data
+                this.updateProjectData(project);
+            },
+            removeTimesheet: function (project, timesheet, tIdx) {
+                var self = this;
+                return function () {
+                    project.timesheet.splice(tIdx, 1);
+                    self.$http.delete(getURL('/timesheet/user_id/' + self.userId + '/project_id/' + project.id + '/date/' + timesheet.date))
+                        .then(function (resp) { }, unauthorizedHandler);
+                };
             },
             sumDuration: function (project) {
                 var tmp = project.timesheet
