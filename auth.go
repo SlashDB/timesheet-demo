@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -261,17 +262,29 @@ func setupAuthHandlers() {
 }
 
 func authorizationMiddleware(fn func(http.ResponseWriter, *http.Request), secret []byte) func(w http.ResponseWriter, r *http.Request) {
+	baseURL := "/db/" + pa.SdbDBName + "/timesheet/user_id/"
 	return func(w http.ResponseWriter, r *http.Request) {
 		token, err := request.ParseFromRequest(r, request.OAuth2Extractor, func(token *jwt.Token) (interface{}, error) {
 			// we simply check the token claims, but this is a good place
 			// to parse the r.URL.Path or other request parameters
-			// to determine if a given user can access requested data
-			// check if user of ID = 8 can read /db/timesheet/project/project_id/2/
+			// and determine if a given user can access requested data
+			// i.e. check if user of ID = 8 can access /db/timesheet/timesheet/user_id/8/project.json etc.
 			mc := token.Claims.(jwt.MapClaims)
-			_, ok := mc["id"]
+			userID, ok := mc["id"]
 			if !ok {
 				return nil, fmt.Errorf("token lacks 'id' claim")
 			}
+
+			userURL := baseURL + strconv.Itoa(int(userID.(float64))) + "/"
+			userURLLen := len(userURL)
+			// if: userID = 10
+			// and: r.URL.Path = "/db/timesheet/timesheet/user_id/10/project.json
+			// userURL = "/db/timesheet/timesheet/user_id/10/"
+			// then: check if r.URL.Path starts with userURL
+			if len(r.URL.Path) < userURLLen && r.URL.Path[:userURLLen] != userURL {
+				return nil, fmt.Errorf("user with id: '%v', is not authorized", userID)
+			}
+
 			_, ok = mc["username"]
 			if !ok {
 				return nil, fmt.Errorf("token lacks 'username' claim")
@@ -284,7 +297,7 @@ func authorizationMiddleware(fn func(http.ResponseWriter, *http.Request), secret
 		})
 
 		if err != nil || !token.Valid {
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			http.Error(w, http.StatusText(http.StatusUnauthorized)+": "+err.Error(), http.StatusUnauthorized)
 			return
 		}
 		fn(w, r)

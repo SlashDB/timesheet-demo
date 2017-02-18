@@ -201,7 +201,7 @@ func authorizationMiddleware(fn func(http.ResponseWriter, *http.Request), secret
 			// we simply check the token claims, but this is a good place
 			// to parse the r.URL.Path or other request parameters
 			// and determine if a given user can access requested data
-			// i.e. check if user of ID = 8 can read /db/timesheet/project/project_id/2/ etc.
+			// i.e. check if user of ID = 8 can access /db/timesheet/timesheet/user_id/8/project.json etc.
 			mc := token.Claims.(jwt.MapClaims)
 			_, ok := mc["id"]
 			if !ok {
