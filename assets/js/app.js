@@ -416,19 +416,19 @@
                     var data = {
                         duration: this.duration.value,
                         accomplishments: this.accomplishments.value,
-                        project_id: this.projectId,
+                        project_id: this.project.id,
                         user_id: this.userId
                     };
 
                     this.$http.post(getURL('/timesheet.json'), data)
-                        .then(function () {}, function (resp) {
+                        .then(function () { }, function (resp) {
                             // ignore errors - bitbucket issue #360
                             unauthorizedHandler(resp);
                             if (resp.status == 500) {
                                 var ld = extend({
                                     date: new Date().toDateTimeInputValue(19)
                                 }, data);
-                                this.$emit('timesheet-created', ld);
+                                this.$emit('timesheet-created', this.project, ld);
                                 resetFields(this, ['accomplishments']);
                             } else {
                                 console.log(resp);
@@ -461,11 +461,11 @@
         props: {
             userId: {
                 type: Number,
-                default: -1,
+                default: -1
             },
-            projectId: {
-                type: Number,
-                default: -1,
+            project: {
+                type: Object,
+                required: true
             }
         }
     });
@@ -531,16 +531,14 @@
                                 accomplishments: ''
                             };
 
-                            this.$http.post(getURL('/timesheet.json'), tdata).then(function () {}, function (resp) {
+                            this.$http.post(getURL('/timesheet.json'), tdata).then(function () { }, function (resp) {
                                 // ignore 500 errors - bitbucket issue #360
                                 unauthorizedHandler(resp)
                                 if (resp.status == 500) {
-                                    var ld = {
-                                        data: extend({
-                                            id: tdata.project_id
-                                        }, data),
-                                        timesheets: []
-                                    };
+                                    var ld = extend({
+                                        id: Number(tdata.project_id),
+                                        timesheet: []
+                                    }, data);
                                     this.$emit('project-created', ld);
                                     resetFields(this, Object.keys(data));
                                 } else {
@@ -566,17 +564,17 @@
             <div class="col">
                 <div class="mt-3">
                     <new-project :userId="userId" @project-created="addProject"/>
-                    <div v-if="pids.length > 0">
-                        <div class="card mt-3" v-for="pid in pids">
+                    <div v-if="projects.length > 0">
+                        <div class="card mt-3" v-for="project in projects">
                             <div class="card-header">
-                                <span><strong>{{ projects[pid].data.name }}</strong></span>
+                                <span><strong>{{ project.name }}</strong></span>
                                 <span class="float-sm-right float-md-right float-lg-right">
-                                    total duration: <strong>{{ sumDuration(projects[pid]) }}</strong> hours
+                                    total duration: <strong>{{ sumDuration(project) }}</strong> hours
                                 </span>
                             </div>
                             <div class="card-block">
-                                <new-timesheet :userId="userId" :projectId="Number(pid)" @timesheet-created="addTimesheet"/>
-                                <div class="card mt-2" v-for="timesheet in projects[pid].timesheets">
+                                <new-timesheet :userId="userId" :project="project" @timesheet-created="addTimesheet"/>
+                                <div class="card mt-2" v-for="timesheet in project.timesheet" v-if="timesheet.duration > 0 && timesheet.accomplishments.length > 0">
                                     <div class="card-header">created: <strong>{{ timesheet.date | formatDateTime }}</strong></div>
                                     <div class="card-block">
                                         <h6 class="card-subtitle mb-2 text-muted">duration: <strong>{{ timesheet.duration }}</strong> hours</h6>
@@ -598,55 +596,32 @@
         `,
         mounted: function () {
             if (this.userId !== -1) {
-                this.$http.get(getURL('/timesheet/user_id/' + this.userId + '.json'))
+                // get all projects and their timesheet-s
+                this.$http.get(getURL('/timesheet/user_id/' + this.userId + '/project.json?depth=1&sort=timestamp'))
                     .then(function (resp) {
-                        var timesheet, project, pid, timesheets = resp.data;
-                        for (var i = timesheets.length - 1; i >= 0; i--) {
-                            timesheet = timesheets[i];
-                            pid = timesheet.project_id;
-                            if (this.projects[pid] == null) {
-                                this.$set(this.projects, pid, {
-                                    timesheets: [],
-                                    data: {}
-                                });
-                            }
-                            if (timesheet.duration >= 0.01) {
-                                this.projects[pid].timesheets.push(timesheet);
-                            }
+                        var projects = resp.data.reverse();
+                        for (var i = 0, l = projects.length, project; i < l; i++) {
+                            project = projects[i];
+                            project.timesheet = project.timesheet.reverse();
                         }
-                    }, unauthorizedHandler)
-                    .then(function () {
-                        this.pids = Object.keys(this.projects).reverse();
-
-                        var successH = function (pid) {
-                            return function (resp) {
-                                extend(this.projects[pid].data, resp.data);
-                            };
-                        };
-
-                        for (var i = 0, l = this.pids.length, pid; i < l; i++) {
-                            pid = this.pids[i];
-                            this.$http.get(getURL('/project/id/' + pid + '.json')).then(successH(pid));
-                        }
+                        this.projects = projects;
                     }, unauthorizedHandler);
             }
         },
         data: function () {
             return {
-                projects: {},
-                pids: []
+                projects: []
             };
         },
         methods: {
             addProject: function (project) {
-                this.pids.splice(0, 0, project.data.id);
-                this.$set(this.projects, project.data.id, project);
+                this.projects.splice(0, 0, project);
             },
-            addTimesheet: function (timesheet) {
-                this.projects[timesheet.project_id].timesheets.splice(0, 0, timesheet);
+            addTimesheet: function (project, timesheet) {
+                project.timesheet.splice(0, 0, timesheet);
             },
             sumDuration: function (project) {
-                var tmp = project.timesheets
+                var tmp = project.timesheet
                     .map(function (el) {
                         return el.duration || 0;
                     })
