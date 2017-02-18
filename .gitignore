@@ -8,6 +8,7 @@ typings/
 
 cSpell.json
 timesheet
+timesheet-demo
 
 bindata.go
 timesheet-linux64
