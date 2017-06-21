@@ -421,18 +421,15 @@
                     };
 
                     this.$http.post(getURL('/timesheet/user_id/' + this.userId + '.json'), data)
-                        .then(function () { }, function (resp) {
-                            // ignore errors - bitbucket issue #360
+                        .then(function (resp) {
+                            var ld = extend({
+                                date: new Date().toDateTimeInputValue(19)
+                            }, data);
+                            this.$emit('timesheet-created', this.project, ld);
+                            resetFields(this, ['accomplishments']);
+                        }, function (resp) {
                             unauthorizedHandler(resp);
-                            if (resp.status == 500) {
-                                var ld = extend({
-                                    date: new Date().toDateTimeInputValue(19)
-                                }, data);
-                                this.$emit('timesheet-created', this.project, ld);
-                                resetFields(this, ['accomplishments']);
-                            } else {
-                                console.log(resp);
-                            }
+                            console.log(resp);
                         });
                 }
             }
@@ -532,19 +529,16 @@
                             };
 
                             this.$http.post(getURL('/timesheet/user_id/' + this.userId + '.json'), tdata)
-                                .then(function () { }, function (resp) {
-                                    // ignore 500 errors - bitbucket issue #360
+                                .then(function (resp) {
+                                    var ld = extend({
+                                        id: Number(tdata.project_id),
+                                        timesheet: []
+                                    }, data);
+                                    this.$emit('project-created', ld);
+                                    resetFields(this, Object.keys(data));
+                                }, function (resp) {
                                     unauthorizedHandler(resp)
-                                    if (resp.status == 500) {
-                                        var ld = extend({
-                                            id: Number(tdata.project_id),
-                                            timesheet: []
-                                        }, data);
-                                        this.$emit('project-created', ld);
-                                        resetFields(this, Object.keys(data));
-                                    } else {
-                                        console.log(resp);
-                                    }
+                                    console.log(resp);
                                 });
                         });
                 }
@@ -663,7 +657,7 @@
                             .then(function (resp) {
                                 // then remove the project itself
                                 self.$http.delete(getURL('/timesheet/user_id/' + self.userId + '/project/id/' + project.id))
-                                    .then(function (resp) { }, unauthorizedHandler);
+                                    .then(function (resp) {}, unauthorizedHandler);
                             }, unauthorizedHandler);
                     }
                 };
@@ -684,7 +678,7 @@
                 return function () {
                     project.timesheet.splice(tIdx, 1);
                     self.$http.delete(getURL('/timesheet/user_id/' + self.userId + '/project_id/' + project.id + '/date/' + timesheet.date))
-                        .then(function (resp) { }, unauthorizedHandler);
+                        .then(function (resp) {}, unauthorizedHandler);
                 };
             },
             sumDuration: function (project) {
