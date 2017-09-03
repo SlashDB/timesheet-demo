@@ -275,14 +275,14 @@ func authorizationMiddleware(fn func(http.ResponseWriter, *http.Request), secret
 				return nil, fmt.Errorf("token lacks 'id' claim")
 			}
 
-			userURL := baseURL + strconv.Itoa(int(userID.(float64))) + "/"
-			userURLLen := len(userURL)
+			userPath := baseURL + strconv.FormatFloat(userID.(float64), 'f', 0, 64)
+			userPathLen := len(userPath) + 1
 			// if: userID = 10
 			// and: r.URL.Path = "/db/timesheet/timesheet/user_id/10/project.json
-			// userURL = "/db/timesheet/timesheet/user_id/10/"
-			// then: check if r.URL.Path starts with userURL
-			if len(r.URL.Path) < userURLLen && r.URL.Path[:userURLLen] != userURL {
-				return nil, fmt.Errorf("user with id: '%v', is not authorized", userID)
+			// userPath = "/db/timesheet/timesheet/user_id/10/"
+			// then: check if r.URL.Path starts with userPath
+			if len(r.URL.Path) < userPathLen || (r.URL.Path[:userPathLen] != userPath+"/" && r.URL.Path[:userPathLen] != userPath+".") {
+				return nil, fmt.Errorf("resource access denied")
 			}
 
 			_, ok = mc["username"]
