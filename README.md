@@ -46,7 +46,7 @@ and I recommend using the [docker](https://docs.slashdb.com/user-guide/docker.ht
 $ docker pull slashdb/slashdb
 $ mkdir timesheet-docker
 $ cd timesheet-docker
-$ wget -c http://downloads.slashdb.com/v0.9/default-slashdb-configs_0.9.15.zip
+$ wget -c https://downloads.slashdb.com/v0.9/0.9.15/default-slashdb-configs_0.9.15.zip
 $ unzip default-slashdb-configs_0.9.15.zip
 $ docker run -d -p 8000:80 -v $PWD/slashdb:/etc/slashdb -v $PWD/slashdb:/var/log/slashdb slashdb/slashdb
 ```
