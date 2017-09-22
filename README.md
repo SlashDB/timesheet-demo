@@ -47,7 +47,7 @@ $ docker pull slashdb/slashdb
 $ mkdir timesheet-docker
 $ cd timesheet-docker
 $ wget -c https://downloads.slashdb.com/latest/default-slashdb-configs.zip
-$ unzip default-slashdb-configs_0.9.15.zip
+$ unzip default-slashdb-configs.zip
 $ docker run -d -p 8000:80 -v $PWD/slashdb:/etc/slashdb -v $PWD/slashdb:/var/log/slashdb slashdb/slashdb
 ```
 
