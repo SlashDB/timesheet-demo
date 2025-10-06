@@ -9,7 +9,7 @@ it will automatically sum-up the time a given project has taken. Here's a little
 ## A short descriptions of the most important parts
 
 ### SlashDB
-SlashDB can automatically generates a REST API from relational databases making it easy to access and modify our data.
+SlashDB automatically generates a REST API from relational databases making it easy to access and modify our data.
 In general, it will save a lot of work coding my own data API-s.
 
 ### Go
